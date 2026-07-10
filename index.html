@@ -253,21 +253,28 @@
     <!-- ⑤ 검토 버튼 -->
     <button class="primary-btn" id="runInvestigationBtn" type="button" style="margin-top:16px;">검토 완료 · 결과 확인 →</button>
 
-    <!-- ⑥ 검토 결과 (모든 경우에 내용 + 문서 생성) -->
-    <div id="invResultArea"></div>
+  </section>
 
-    <div id="invDocBox" style="display:none">
-      <p class="modal-note">아래는 입력한 내용으로 자동 생성된 결과 문서 미리보기입니다. 판단 사유·면담 요약·서명란 등 글자 부분은 직접 눌러서 수정할 수 있습니다. 조직·매장·사고정보 등은 위 입력값을 고친 뒤 "검토 완료"를 다시 눌러야 반영됩니다. 이 화면 그대로 PDF 저장 및 Teams 전송에 사용됩니다.</p>
+  <!-- 검토 결과 화면 (새 화면처럼 전체를 덮는 오버레이 - 길게 스크롤되는 대신 별도 페이지 느낌) -->
+  <div class="inv-result-overlay" id="invResultOverlay">
+    <header class="inv-result-header">
+      <button class="inv-result-back-btn" id="invResultBackBtn" type="button" aria-label="뒤로가기">← 뒤로</button>
+      <p class="inv-result-header-title">검토 결과</p>
+    </header>
+    <div class="inv-result-body">
+      <div id="invResultArea"></div>
 
-      <div id="invDocPreview" class="doc-preview"></div>
+      <div id="invDocBox" style="display:none">
+        <p class="modal-note">아래는 입력한 내용으로 자동 생성된 결과 문서 미리보기입니다. 판단 사유·면담 요약·서명란 등 글자 부분은 직접 눌러서 수정할 수 있습니다. 조직·매장·사고정보 등을 고치려면 뒤로가기 후 "검토 완료"를 다시 눌러야 반영됩니다.</p>
 
-      <div class="result-btn-row">
-        <button class="secondary-btn" id="invPdfBtn" type="button">📄 PDF 저장</button>
-        <button class="secondary-btn" id="invTeamsBtn" type="button">📤 Teams로 전송 (미리보기)</button>
+        <div id="invDocPreview" class="doc-preview"></div>
+
+        <div class="result-btn-row">
+          <button class="primary-btn" id="invTeamsBtn" type="button" style="margin:0;">전송하기</button>
+        </div>
       </div>
     </div>
-
-  </section>
+  </div>
 
   <!-- Teams 전송 미리보기 모달 (탭 바깥에 위치 - 어떤 탭에서 열어도 화면에 표시되도록) -->
   <div class="modal-overlay" id="teamsModal">
@@ -294,11 +301,6 @@
         <button class="secondary-btn" id="closeTeamsModalBtn" type="button">닫기</button>
       </div>
     </div>
-  </div>
-
-  <!-- 인쇄(PDF) 전용 영역: 화면에는 숨김, 인쇄 시에만 표시 -->
-  <div id="printArea">
-    <div id="printContent"></div>
   </div>
 
   <!-- TAB: 매뉴얼 (신규매뉴얼_HTML 콘텐츠를 모바일 최적화 + 검색 기능으로 통합) -->

@@ -29,7 +29,7 @@ const INV_CASE_ID_KEY = 'fieldGuide_investigation_caseId';
  * "Teams로 전송" 버튼이 실제로 동작합니다.
  * 비워두면 미리보기만 표시되고 실제 전송은 되지 않습니다.
  */
-const INV_TEAMS_ENDPOINT_URL = 'https://script.google.com/macros/s/AKfycbzKtouPrxa8wt5qG9XnQsoshB3bG_GbkLHIM2KOXhjWiUeQ_VzFhukWqD-ROTvrEIkb/exec'; // 예: 'https://script.google.com/macros/s/AKfycb.../exec' (새로 배포한 뒤 여기에 붙여넣기)
+const INV_TEAMS_ENDPOINT_URL = ''; // 예: 'https://script.google.com/macros/s/AKfycb.../exec' (새로 배포한 뒤 여기에 붙여넣기)
 
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -782,22 +782,21 @@ document.addEventListener('DOMContentLoaded', () => {
       const result = computeJudgement();
       window.__investigationResult = result;
       renderResult(result);
-      document.getElementById('invResultArea').scrollIntoView({ behavior: 'smooth', block: 'start' });
+      // 결과를 아래로 이어붙이는 대신, 새 화면처럼 전체를 덮는 오버레이로 전환합니다.
+      const overlay = document.getElementById('invResultOverlay');
+      if (overlay) {
+        overlay.classList.add('visible');
+        const body = overlay.querySelector('.inv-result-body');
+        if (body) body.scrollTo({ top: 0 });
+      }
     });
   }
 
-  /* =========================================================
-     5. PDF 저장 — 화면에 보이는 문서 미리보기(수정 내용 포함) 그대로 인쇄
-     ========================================================= */
-  const invPdfBtn = document.getElementById('invPdfBtn');
-  if (invPdfBtn) {
-    invPdfBtn.addEventListener('click', () => {
-      const preview = document.getElementById('invDocPreview');
-      const printContent = document.getElementById('printContent');
-      if (preview && printContent) {
-        printContent.innerHTML = `<div class="doc-preview">${preview.innerHTML}</div>`;
-      }
-      window.print();
+  const invResultBackBtn = document.getElementById('invResultBackBtn');
+  if (invResultBackBtn) {
+    invResultBackBtn.addEventListener('click', () => {
+      const overlay = document.getElementById('invResultOverlay');
+      if (overlay) overlay.classList.remove('visible');
     });
   }
 
@@ -1009,6 +1008,15 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  // fetch에 제한시간을 걸어, 서버 응답이 오래 걸리거나 안 와도 "전송 중"에서
+  // 영원히 멈추지 않게 합니다. (AbortController 사용)
+  function fetchWithTimeout(url, options, ms) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), ms);
+    return fetch(url, Object.assign({}, options, { signal: controller.signal }))
+      .finally(() => clearTimeout(timer));
+  }
+
   const sendTeamsNowBtn = document.getElementById('sendTeamsNowBtn');
   if (sendTeamsNowBtn) {
     sendTeamsNowBtn.addEventListener('click', () => {
@@ -1033,12 +1041,14 @@ document.addEventListener('DOMContentLoaded', () => {
       // "전송하기"를 누른 시점에만 무거운 캡처 작업을 시작합니다.
       buildTeamsPayload()
         .then(payload => {
-          sendTeamsNowBtn.textContent = '⏳ 전송 중...';
-          return fetch(INV_TEAMS_ENDPOINT_URL, {
+          sendTeamsNowBtn.textContent = '⏳ 전송 중... (최대 20초)';
+          if (statusEl) statusEl.textContent = '전송 중입니다. 잠시만 기다려주세요... (최대 20초)';
+          // 서버 응답이 20초 넘게 없으면 강제로 실패 처리해 화면이 멈추지 않게 합니다.
+          return fetchWithTimeout(INV_TEAMS_ENDPOINT_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // Apps Script와의 호환을 위해 text/plain 사용
             body: JSON.stringify(payload)
-          });
+          }, 20000);
         })
         .then(res => res.json())
         .then(data => {
@@ -1051,7 +1061,7 @@ document.addEventListener('DOMContentLoaded', () => {
         })
         .catch(() => {
           if (statusEl) {
-            statusEl.textContent = '⚠ 전송에 실패했습니다. 네트워크 상태를 확인한 뒤 다시 시도하거나 PDF를 직접 공유해주세요.';
+            statusEl.textContent = '⚠ 전송에 실패했습니다(시간 초과 포함). 네트워크 상태를 확인한 뒤 다시 시도하거나 PDF를 직접 공유해주세요.';
             statusEl.className = 'teams-send-status teams-send-error';
           }
           setTeamsModalState('done');
@@ -1060,6 +1070,21 @@ document.addEventListener('DOMContentLoaded', () => {
           sendTeamsNowBtn.disabled = false;
           sendTeamsNowBtn.textContent = '전송하기';
         });
+    });
+  }
+
+  /* ---------- 모달 닫기 ---------- */
+  const closeTeamsModalBtn = document.getElementById('closeTeamsModalBtn');
+  const teamsModalEl = document.getElementById('teamsModal');
+  if (closeTeamsModalBtn && teamsModalEl) {
+    closeTeamsModalBtn.addEventListener('click', () => {
+      teamsModalEl.classList.remove('visible');
+    });
+  }
+  // 모달 바깥(회색 배경) 클릭 시에도 닫힘
+  if (teamsModalEl) {
+    teamsModalEl.addEventListener('click', (e) => {
+      if (e.target === teamsModalEl) teamsModalEl.classList.remove('visible');
     });
   }
 
