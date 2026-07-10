@@ -273,14 +273,24 @@
   <div class="modal-overlay" id="teamsModal">
     <div class="modal-box">
       <h3>Teams 전송</h3>
-      <p class="modal-note" id="teamsModalNote">아래는 전송될 내용입니다. "전송하기"를 누르면 Google Apps Script를 거쳐 Teams 채널에 게시되고, Google Sheets에도 기록이 저장됩니다.</p>
+      <p class="modal-note" id="teamsModalNote">아래는 전송될 내용입니다. "전송하기"를 누르면 결과문서 PDF를 만들어 Teams 채널·개인 쪽지에 게시하고, Google Sheets에 기록을 저장합니다.</p>
       <pre id="teamsPayloadPreview" class="payload-preview"></pre>
       <p id="teamsSendStatus" class="teams-send-status"></p>
-      <div class="modal-btn-row">
-        <button class="secondary-btn" id="copyPayloadBtn" type="button">복사하기</button>
+
+      <!-- 전송 전: 전송하기 버튼만 표시 -->
+      <div class="modal-btn-row" id="teamsPreSendRow">
         <button class="primary-btn" id="sendTeamsNowBtn" type="button" style="margin:0;">전송하기</button>
       </div>
-      <div class="modal-btn-row" style="margin-top:8px;">
+
+      <!-- 전송 완료 후: PDF 공유(휴대폰 공유시트로 Teams 앱 선택 가능) + 홈으로 -->
+      <div class="modal-btn-row" id="teamsPostSendRow" style="display:none;">
+        <button class="secondary-btn" id="sharePdfBtn" type="button">📤 PDF 공유하기</button>
+      </div>
+      <div class="modal-btn-row" id="teamsHomeRow" style="display:none; margin-top:8px;">
+        <button class="primary-btn" id="teamsHomeBtn" type="button" style="margin:0;">🏠 홈으로</button>
+      </div>
+
+      <div class="modal-btn-row" id="teamsCloseRow" style="margin-top:8px;">
         <button class="secondary-btn" id="closeTeamsModalBtn" type="button">닫기</button>
       </div>
     </div>

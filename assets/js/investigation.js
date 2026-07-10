@@ -29,7 +29,7 @@ const INV_CASE_ID_KEY = 'fieldGuide_investigation_caseId';
  * "Teams로 전송" 버튼이 실제로 동작합니다.
  * 비워두면 미리보기만 표시되고 실제 전송은 되지 않습니다.
  */
-const INV_TEAMS_ENDPOINT_URL = 'https://script.google.com/macros/s/AKfycbytVEIXlrm3ErwQzaSjqvfbfdi9qGTF1-KIBEs54-1g22sclT7oyzha21_O6hJ7DDU/exec'; // 예: 'https://script.google.com/macros/s/AKfycb.../exec' (새로 배포한 뒤 여기에 붙여넣기)
+const INV_TEAMS_ENDPOINT_URL = ''; // 예: 'https://script.google.com/macros/s/AKfycb.../exec' (새로 배포한 뒤 여기에 붙여넣기)
 
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -854,6 +854,9 @@ document.addEventListener('DOMContentLoaded', () => {
         // 표준 "data:application/pdf;base64,..." 형태로 정리합니다.
         const rawUri = pdf.output('datauristring');
         const base64Part = rawUri.split(',').pop();
+        // "PDF 공유하기" 버튼(카톡/Teams 앱 선택 등 OS 공유시트)에서 쓸 수 있도록
+        // 같은 PDF의 Blob도 전역에 보관해둡니다.
+        window.__lastPdfBlob = pdf.output('blob');
         return 'data:application/pdf;base64,' + base64Part;
       })
       .catch(() => null)
@@ -966,6 +969,22 @@ document.addEventListener('DOMContentLoaded', () => {
     ].join('\n');
   }
 
+  /* ---------- 모달 화면 상태 전환 (전송 전 / 전송 완료 후) ---------- */
+  function setTeamsModalState(state) {
+    const preRow = document.getElementById('teamsPreSendRow');
+    const postRow = document.getElementById('teamsPostSendRow');
+    const homeRow = document.getElementById('teamsHomeRow');
+    if (state === 'pre') {
+      if (preRow) preRow.style.display = 'flex';
+      if (postRow) postRow.style.display = 'none';
+      if (homeRow) homeRow.style.display = 'none';
+    } else if (state === 'done') {
+      if (preRow) preRow.style.display = 'none';
+      if (postRow) postRow.style.display = 'flex';
+      if (homeRow) homeRow.style.display = 'flex';
+    }
+  }
+
   const invTeamsBtn = document.getElementById('invTeamsBtn');
   if (invTeamsBtn) {
     invTeamsBtn.addEventListener('click', () => {
@@ -973,7 +992,6 @@ document.addEventListener('DOMContentLoaded', () => {
       const statusEl = document.getElementById('teamsSendStatus');
       const noteEl = document.getElementById('teamsModalNote');
       const modal = document.getElementById('teamsModal');
-      const sendBtn = document.getElementById('sendTeamsNowBtn');
 
       // 캡처 없이 즉시 열림 — 여기서는 무거운 작업을 하지 않아 멈춤 현상이 없습니다.
       const result = window.__investigationResult || computeJudgement();
@@ -981,10 +999,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
       if (preview) preview.textContent = buildPreviewSummary(lightPayload);
       if (statusEl) statusEl.textContent = '';
-      if (sendBtn) sendBtn.disabled = false;
+      setTeamsModalState('pre');
       if (noteEl) {
         noteEl.textContent = INV_TEAMS_ENDPOINT_URL
-          ? '"전송하기"를 누르면 결과문서 이미지를 캡처해 Teams 채널·개인 쪽지에 게시하고 기록을 저장합니다. (캡처에 몇 초 걸릴 수 있습니다)'
+          ? '"전송하기"를 누르면 결과문서 PDF를 만들어 Teams 채널·개인 쪽지에 게시하고 기록을 저장합니다. (PDF 생성에 몇 초 걸릴 수 있습니다)'
           : '전송 연동 주소가 아직 설정되지 않아 미리보기만 가능합니다. (assets/js/investigation.js 상단의 INV_TEAMS_ENDPOINT_URL 값을 설정하세요)';
       }
       if (modal) modal.classList.add('visible');
@@ -1005,7 +1023,6 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       // 로딩 상태를 눈에 보이게 표시 (버튼 문구 변경 + 비활성화)
-      const originalLabel = sendTeamsNowBtn.textContent;
       sendTeamsNowBtn.disabled = true;
       sendTeamsNowBtn.textContent = '⏳ 결과문서 PDF 생성 중...';
       if (statusEl) {
@@ -1029,17 +1046,73 @@ document.addEventListener('DOMContentLoaded', () => {
             statusEl.textContent = data.ok ? '✅ 전송 완료되었습니다.' : '⚠ 전송은 되었으나 일부 처리에 문제가 있었습니다.';
             statusEl.className = 'teams-send-status ' + (data.ok ? 'teams-send-ok' : 'teams-send-error');
           }
+          // 성공/실패 여부와 무관하게 PDF 생성 자체는 끝났으므로, 공유하기 버튼을 쓸 수 있게 전환
+          setTeamsModalState('done');
         })
         .catch(() => {
           if (statusEl) {
-            statusEl.textContent = '⚠ 전송에 실패했습니다. 네트워크 상태를 확인한 뒤 다시 시도하거나 PDF로 저장해주세요.';
+            statusEl.textContent = '⚠ 전송에 실패했습니다. 네트워크 상태를 확인한 뒤 다시 시도하거나 PDF를 직접 공유해주세요.';
             statusEl.className = 'teams-send-status teams-send-error';
           }
+          setTeamsModalState('done');
         })
         .finally(() => {
           sendTeamsNowBtn.disabled = false;
-          sendTeamsNowBtn.textContent = originalLabel;
+          sendTeamsNowBtn.textContent = '전송하기';
         });
+    });
+  }
+
+  /* =========================================================
+     PDF 공유하기 — 휴대폰 표준 공유시트를 띄워 Teams·카카오톡 등
+     원하는 앱으로 방금 만든 PDF 파일을 직접 보낼 수 있게 합니다.
+     (Web Share API — 파일 공유는 모바일 브라우저에서만 지원됩니다)
+     ========================================================= */
+  const sharePdfBtn = document.getElementById('sharePdfBtn');
+  if (sharePdfBtn) {
+    sharePdfBtn.addEventListener('click', () => {
+      const blob = window.__lastPdfBlob;
+      if (!blob) {
+        alert('공유할 PDF가 없습니다. "전송하기"를 먼저 눌러 PDF를 생성해주세요.');
+        return;
+      }
+      const result = window.__investigationResult || computeJudgement();
+      const b = result.base;
+      const dateStr = (b.invIncidentDate || '').replace(/-/g, '') || 'unknown';
+      const storeStr = (b.invStoreName || '매장').replace(/[\\/:*?"<>|]/g, '');
+      const fileName = `${dateStr}_${storeStr}_사고조사결과.pdf`;
+      const file = new File([blob], fileName, { type: 'application/pdf' });
+
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        navigator.share({
+          files: [file],
+          title: '사고조사 결과 문서',
+          text: '사고조사 결과 문서를 확인해주세요.'
+        }).catch(() => { /* 사용자가 공유를 취소한 경우 등 - 별도 처리 불필요 */ });
+      } else {
+        // 공유 API를 지원하지 않는 환경(주로 PC 브라우저)에서는 파일 다운로드로 대체
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 3000);
+        alert('이 기기·브라우저에서는 공유 기능을 지원하지 않아 PDF를 다운로드했습니다. 다운로드된 파일을 Teams 앱에서 직접 첨부해주세요.');
+      }
+    });
+  }
+
+  /* ---------- 홈으로 (모달 닫고 즉시대응 화면으로 이동) ---------- */
+  const teamsHomeBtn = document.getElementById('teamsHomeBtn');
+  if (teamsHomeBtn) {
+    teamsHomeBtn.addEventListener('click', () => {
+      const modal = document.getElementById('teamsModal');
+      if (modal) modal.classList.remove('visible');
+      const homeTarget = document.querySelector('.nav-menu-item[data-target="manual"]') ? 'manual' : 'investigation';
+      const homeBtn = document.querySelector(`.nav-menu-item[data-target="${homeTarget}"]`);
+      if (homeBtn) homeBtn.click();
     });
   }
 
