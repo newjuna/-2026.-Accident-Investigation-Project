@@ -1,0 +1,1209 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>사고 발생 현장 대응 가이드 | 안전보건팀</title>
+<link rel="stylesheet" href="assets/css/style.css">
+<!-- 결과 문서 서명란에 사용하는 손글씨 느낌 폰트 (Google Fonts) -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nanum+Pen+Script&display=swap" rel="stylesheet">
+</head>
+<body>
+
+<!-- ============================================================
+     로그인 화면 (비밀번호 4자리, ID 없음) — 사내 시스템이라 전체 공개 저장소여도
+     최소한의 접근 제한을 둡니다. 임시 비밀번호: 0000
+     ============================================================ -->
+<div id="loginOverlay">
+  <div class="login-box">
+    <span class="login-logo">DAISO</span>
+    <h1 class="login-title">사고 발생 현장 대응 가이드</h1>
+    <p class="login-sub">비밀번호 4자리를 입력하세요</p>
+
+    <div class="login-pin-dots" id="loginPinDots">
+      <span class="login-pin-dot"></span>
+      <span class="login-pin-dot"></span>
+      <span class="login-pin-dot"></span>
+      <span class="login-pin-dot"></span>
+    </div>
+
+    <p class="login-error" id="loginError">&nbsp;</p>
+
+    <div class="login-keypad" id="loginKeypad">
+      <button type="button" class="login-key" data-key="1">1</button>
+      <button type="button" class="login-key" data-key="2">2</button>
+      <button type="button" class="login-key" data-key="3">3</button>
+      <button type="button" class="login-key" data-key="4">4</button>
+      <button type="button" class="login-key" data-key="5">5</button>
+      <button type="button" class="login-key" data-key="6">6</button>
+      <button type="button" class="login-key" data-key="7">7</button>
+      <button type="button" class="login-key" data-key="8">8</button>
+      <button type="button" class="login-key" data-key="9">9</button>
+      <button type="button" class="login-key login-key-func" data-key="clear">지우기</button>
+      <button type="button" class="login-key" data-key="0">0</button>
+      <button type="button" class="login-key login-key-func" data-key="back">←</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     초기 로딩 화면 (로그인 성공 직후, 이 시간 동안 이미지·데이터를 미리 불러와
+     이후 화면 전환 시 로딩이 느껴지지 않게 합니다)
+     ============================================================ -->
+<div id="bootOverlay" style="display:none">
+  <span class="boot-logo">DAISO SAFETY</span>
+  <div class="boot-spinner"></div>
+  <p class="boot-text" id="bootText">시스템 최적화 중입니다</p>
+  <p class="boot-sub">잠시만 기다려주세요...</p>
+  <div class="boot-progress-track">
+    <div class="boot-progress-fill" id="bootProgressFill"></div>
+  </div>
+</div>
+
+<!-- ============================================================
+     "사고발생 시 꼭 숙지해야 할 사항" 안내 팝업
+     로그인/로딩이 끝난 뒤 처음 한 번 뜨며, 문구가 순서대로 하나씩 나타납니다.
+     ============================================================ -->
+<div class="guide-overlay" id="guideOverlay" style="display:none">
+  <div class="guide-popup">
+    <div class="guide-header">
+      <span class="guide-logo">DAISO</span>
+      <p class="guide-header-title">사고 발생 시 꼭 숙지해야 할 사항</p>
+    </div>
+    <div class="guide-body" id="guideBody">
+      <div class="guide-step guide-step-hidden" id="gStep0">
+        <div class="guide-num">!</div>
+        <div class="guide-text">사고 발생 시 <b>수행 역할</b>을 기억하세요!</div>
+      </div>
+      <div class="guide-step guide-step-hidden" id="gStep1">
+        <div class="guide-num">1</div>
+        <div class="guide-text">첫째, <b>CCTV 확보!</b></div>
+      </div>
+      <div class="guide-step guide-step-hidden" id="gStep2">
+        <div class="guide-num">2</div>
+        <div class="guide-text">둘째, <b>목격자 진술 확인!</b></div>
+      </div>
+      <div class="guide-step guide-step-hidden" id="gStep3">
+        <div class="guide-num">3</div>
+        <div class="guide-text">셋째, <b>카톡 등 최초 보고(공유) 확인!</b></div>
+      </div>
+    </div>
+    <div class="guide-footer">
+      <button class="primary-btn" id="guideCloseBtn" type="button" disabled>확인했습니다</button>
+    </div>
+  </div>
+</div>
+
+<!-- 상단 헤더: 제목 + 검색/메뉴 아이콘(우측) -->
+<header class="app-header">
+  <div class="app-header-inner">
+    <div class="app-header-text">
+      <p class="app-header-eyebrow">SAFETY FIELD GUIDE</p>
+      <h1 class="app-header-title">사고 발생 현장 대응 가이드</h1>
+    </div>
+    <div class="header-actions">
+      <button class="header-search-btn" id="headerSearchBtn" type="button" aria-label="검색 열기">🔍</button>
+      <button class="header-menu-btn" id="headerMenuBtn" type="button" aria-label="메뉴 열기">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<!-- 우측 슬라이드 사이드바 내비게이션 -->
+<div class="nav-overlay" id="navOverlay"></div>
+<nav class="nav-sidebar" id="navSidebar">
+  <div class="nav-sidebar-head">
+    <div class="nav-sidebar-brand">
+      <p class="nav-eyebrow">DAISO SAFETY</p>
+      <p class="nav-title">사고 대응 가이드</p>
+    </div>
+    <button class="nav-close-btn" id="navCloseBtn" type="button" aria-label="메뉴 닫기">✕</button>
+  </div>
+  <ul class="nav-menu">
+    <li><button class="nav-menu-item active" data-target="manual"><span class="nav-menu-icon">📖</span>매뉴얼</button></li>
+    <li><button class="nav-menu-item" data-target="investigation"><span class="nav-menu-icon">🔎</span>사고조사</button></li>
+  </ul>
+  <div class="nav-sidebar-footer">
+    <p>안전보건팀 · 사고 발생 현장 대응 가이드</p>
+  </div>
+</nav>
+
+<!-- 탭 콘텐츠 -->
+<main class="app-main">
+
+  <!-- TAB: 사고조사 (확인자료 체크 + 목격자 면담 + 판단 + 불인정 시 PDF/문구까지 한 화면) -->
+  <section class="tab-panel" id="panel-investigation" data-panel="investigation">
+
+    <div class="panel-intro">
+      <h2>사고조사</h2>
+      <p>확인자료 체크 → 목격자 면담 작성 → 검토 결과 확인까지 한 화면에서 진행합니다. 작성 중 내용은 이 휴대폰에만 임시 저장되며, 다른 기기·안전보건팀에는 자동으로 전달되지 않습니다.</p>
+    </div>
+
+    <div class="quiz-disclaimer">
+      <p><strong>안내</strong> 아래 결과는 보험가입자의견서 작성 전 사실관계를 정리하기 위한 내부 사전 검토 참고용입니다. 최종 판단은 안전보건팀 검토 및 근로복지공단 결정을 따릅니다.</p>
+    </div>
+
+    <!-- 사고 관리번호 (자동 발급, 이 사고건에 대한 추가 작성/전송을 이어갈 때 기준이 됨) -->
+    <div class="case-id-box">
+      <span class="case-id-label">사고 관리번호</span>
+      <span class="case-id-value" id="invCaseIdDisplay">-</span>
+      <button type="button" class="case-id-new-btn" id="invNewCaseBtn">새 사고 작성</button>
+    </div>
+    <p class="witness-guide-note">이 번호로 같은 사고건의 추가 정보를 이어서 작성·전송할 수 있습니다. 완전히 다른 사고면 "새 사고 작성"을 눌러 새 번호를 받으세요.</p>
+
+    <!-- ① 조직 정보 + 사고 기본정보 -->
+    <fieldset class="check-fieldset">
+      <legend>① 조직 정보</legend>
+      <div class="form-row">
+        <label>부문
+          <select id="invDivision"><option value="">선택</option></select>
+        </label>
+        <label>부서
+          <select id="invDept"><option value="">부문을 먼저 선택</option></select>
+        </label>
+      </div>
+      <div class="form-row">
+        <label>팀
+          <select id="invTeam"><option value="">부서를 먼저 선택</option></select>
+        </label>
+        <label>매장명
+          <input type="text" id="invStoreName" placeholder="예: 매봉역점">
+        </label>
+      </div>
+    </fieldset>
+
+    <fieldset class="check-fieldset">
+      <legend>② 사고 기본정보</legend>
+      <div class="form-row">
+        <label>작성자 (이 폼을 작성하는 사람)
+          <input type="text" id="invAuthorName" placeholder="예: 홍길동 파트장">
+        </label>
+        <label>재해자 성명
+          <input type="text" id="invVictimName">
+        </label>
+      </div>
+      <div class="form-row">
+        <label>사고 장소
+          <input type="text" id="invIncidentPlace">
+        </label>
+        <label>사고 발생일
+          <input type="date" id="invIncidentDate">
+        </label>
+      </div>
+      <div class="form-row">
+        <label>사고 발생시간
+          <input type="time" id="invIncidentTime">
+        </label>
+      </div>
+    </fieldset>
+
+    <!-- ③ 확인자료 체크 : CCTV -->
+    <fieldset class="check-fieldset">
+      <legend>③ CCTV</legend>
+
+      <p class="field-label">CCTV에 사고 장면이 어떻게 찍혀 있나요?</p>
+      <div class="radio-pill-row">
+        <label class="radio-pill"><input type="radio" name="invCctv" value="clear"> 사고 장면이 그대로 보임</label>
+        <label class="radio-pill"><input type="radio" name="invCctv" value="unclear"> 영상은 있으나 사고 장면이 잘 안 보임</label>
+        <label class="radio-pill"><input type="radio" name="invCctv" value="none"> CCTV 영상 없음</label>
+      </div>
+
+      <!-- 사고 장면이 잘 안 보이거나 영상이 없을 때만 아래 질문이 나타납니다 -->
+      <div id="invWorkVideoWrap" class="conditional-block" style="display:none">
+        <p class="field-label">당일 근무 영상에서 통증 호소·이상행동이 보이나요?</p>
+        <div class="radio-pill-row">
+          <label class="radio-pill"><input type="radio" name="invWorkVideoAbnormal" value="yes"> 이상행동이 보임</label>
+          <label class="radio-pill"><input type="radio" name="invWorkVideoAbnormal" value="no"> 이상행동이 안 보임</label>
+        </div>
+      </div>
+    </fieldset>
+
+    <!-- ④ 확인자료 체크 : 공유 기록 -->
+    <fieldset class="check-fieldset">
+      <legend>④ 공유 기록 유무 (카톡·팀즈 등)</legend>
+
+      <label class="check-item"><input type="checkbox" id="invReportImmediate"><span>재해자가 점장/부점장에게 즉시 보고한 기록 있음</span></label>
+      <div id="invReportImmediateWrap" class="conditional-block" style="display:none">
+        <label class="form-full">어떻게 보고했는지 작성
+          <textarea id="invReportImmediateDetail" rows="2" placeholder="예: 사고 직후 재해자가 부점장에게 전화로 알림 → 부점장이 파트장에게 팀즈로 전달"></textarea>
+        </label>
+      </div>
+
+      <label class="check-item"><input type="checkbox" id="invReportChat"><span>카톡/팀즈/전화/라인방 등 기록 있음</span></label>
+      <div id="invReportChatWrap" class="conditional-block" style="display:none">
+        <p class="field-label">증빙 캡처 첨부 (사진 촬영 / 앨범 / 파일)</p>
+        <input type="file" id="invChatFileInput" accept="image/*" multiple hidden>
+        <button type="button" class="secondary-btn" id="invChatAttachBtn" style="margin-bottom:10px;">📎 증빙 첨부</button>
+        <div id="invChatPreview" class="attach-preview"></div>
+      </div>
+    </fieldset>
+
+    <!-- ⑤ 목격자 면담 (작성자가 면담하며 직접 작성) -->
+    <div class="panel-intro" style="margin-top:20px;">
+      <h3 class="section-sub-title">⑤ 목격자 면담</h3>
+      <p class="witness-guide-note">목격자 본인에게 작성시키지 않습니다. <strong>작성자가 직접 면담하며 들은 내용을 입력</strong>합니다. 한 명 작성 후 <strong>"이 면담 저장"</strong>을 누르면 접히고, <strong>"＋ 면담 추가"</strong>로 다음 목격자를 이어서 작성합니다.</p>
+    </div>
+
+    <div id="witnessList"></div>
+
+    <button class="secondary-btn" id="addWitnessBtn" type="button">＋ 면담 추가</button>
+
+    <!-- ⑤ 검토 버튼 -->
+    <button class="primary-btn" id="runInvestigationBtn" type="button" style="margin-top:16px;">검토 완료 · 결과 확인 →</button>
+
+    <!-- ⑥ 검토 결과 (모든 경우에 내용 + 문서 생성) -->
+    <div id="invResultArea"></div>
+
+    <div id="invDocBox" style="display:none">
+      <p class="modal-note">아래는 입력한 내용으로 자동 생성된 결과 문서 미리보기입니다. 판단 사유·면담 요약·서명란 등 글자 부분은 직접 눌러서 수정할 수 있습니다. 조직·매장·사고정보 등은 위 입력값을 고친 뒤 "검토 완료"를 다시 눌러야 반영됩니다. 이 화면 그대로 PDF 저장 및 Teams 전송에 사용됩니다.</p>
+
+      <div id="invDocPreview" class="doc-preview"></div>
+
+      <div class="result-btn-row">
+        <button class="secondary-btn" id="invPdfBtn" type="button">📄 PDF 저장</button>
+        <button class="secondary-btn" id="invTeamsBtn" type="button">📤 Teams로 전송 (미리보기)</button>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- Teams 전송 미리보기 모달 (탭 바깥에 위치 - 어떤 탭에서 열어도 화면에 표시되도록) -->
+  <div class="modal-overlay" id="teamsModal">
+    <div class="modal-box">
+      <h3>Teams 전송</h3>
+      <p class="modal-note" id="teamsModalNote">아래는 전송될 내용입니다. "전송하기"를 누르면 Google Apps Script를 거쳐 Teams 채널에 게시되고, Google Sheets에도 기록이 저장됩니다.</p>
+      <pre id="teamsPayloadPreview" class="payload-preview"></pre>
+      <p id="teamsSendStatus" class="teams-send-status"></p>
+      <div class="modal-btn-row">
+        <button class="secondary-btn" id="copyPayloadBtn" type="button">복사하기</button>
+        <button class="primary-btn" id="sendTeamsNowBtn" type="button" style="margin:0;">전송하기</button>
+      </div>
+      <div class="modal-btn-row" style="margin-top:8px;">
+        <button class="secondary-btn" id="closeTeamsModalBtn" type="button">닫기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 인쇄(PDF) 전용 영역: 화면에는 숨김, 인쇄 시에만 표시 -->
+  <div id="printArea">
+    <div id="printContent"></div>
+  </div>
+
+  <!-- TAB: 매뉴얼 (신규매뉴얼_HTML 콘텐츠를 모바일 최적화 + 검색 기능으로 통합) -->
+  <section class="tab-panel active" id="panel-manual" data-panel="manual">
+
+    <div class="panel-intro">
+      <h2>사고 대응 매뉴얼</h2>
+      <p>필요한 내용만 검색해서 보거나, 아래 챕터 탭에서 골라 확인하세요.</p>
+    </div>
+
+    <div class="action-card action-card-highlight" style="margin-bottom:16px;">
+      <p class="action-card-desc" style="margin:0 0 10px;">실제 사고가 발생했다면, 매뉴얼을 참고하면서 <strong>"사고조사"</strong> 탭에서 CCTV·목격자 면담·결과 문서 작성을 진행하세요.</p>
+      <button class="goto-tab-btn" data-goto="investigation">사고조사로 이동 →</button>
+    </div>
+
+    <div class="man-search-wrap">
+      <input type="text" id="manSearchInput" class="man-search-input" placeholder="예: CCTV, 공상, 출퇴근, 위험성평가...">
+      <div class="man-search-tags">
+        <button class="man-search-tag active" data-mtag="all">전체보기</button>
+        <button class="man-search-tag" data-mtag="즉시대응">즉시대응</button>
+        <button class="man-search-tag" data-mtag="사고조사">사고조사</button>
+        <button class="man-search-tag" data-mtag="경위서">경위서</button>
+        <button class="man-search-tag" data-mtag="휴업신청">휴업신청</button>
+        <button class="man-search-tag" data-mtag="FAQ">FAQ</button>
+      </div>
+    </div>
+
+    <!-- 검색 중일 때만 표시되는 결과 목록 -->
+    <div class="man-search-results" id="manSearchResults" style="display:none"></div>
+
+    <!-- 검색어가 없을 때는 챕터별 콘텐츠를 그대로 보여줌 -->
+    <div id="manChapterArea">
+      <div class="man-chapter-nav" id="manChapterNav">
+        <button class="man-chapter-chip active" data-mchapter="top">소개</button>
+        <button class="man-chapter-chip" data-mchapter="process">01 Process</button>
+        <button class="man-chapter-chip" data-mchapter="classification">02 사고구분</button>
+        <button class="man-chapter-chip" data-mchapter="update2026">⭐ 하반기개정</button>
+        <button class="man-chapter-chip" data-mchapter="report-guide">03 경위서Guide</button>
+        <button class="man-chapter-chip" data-mchapter="risk-assessment">04 위험성평가</button>
+        <button class="man-chapter-chip" data-mchapter="prevention">05 예방관리</button>
+        <button class="man-chapter-chip" data-mchapter="faq">06 FAQ</button>
+      </div>
+
+<section id="top" class="man-section man-hero-section active">
+      <div class="man-hero-badge">SAFETY &amp; HEALTH TEAM</div>
+      <h1 class="man-hero-title">직원 사고 발생 시 대응 매뉴얼</h1>
+      <p class="man-hero-sub">사고 발생 시 신속하고 체계적인 대응을 위한 본사·매장 공통 가이드</p>
+
+      <div class="man-hero-cards">
+        <div class="man-hero-card">
+          <h3>🎯 목적</h3>
+          <p>사고 발생 시 신속하고 체계적인 상황 보고 및 대응을 통해 피해 확산을 최소화하고, 본사와 매장 간 일원화된 보고체계를 확립합니다.</p>
+        </div>
+        <div class="man-hero-card">
+          <h3>📍 적용 범위</h3>
+          <p>본사 및 전 매장, 전 부서를 적용 대상으로 하며, 사고 발생 시 일괄적인 보고 및 대응 기준으로 활용합니다.</p>
+        </div>
+      </div>
+
+      </section>
+
+    <!-- 01 Process -->
+    <section id="process" class="man-section">
+      <p class="man-section-eyebrow">CHAPTER 01</p>
+      <h2 class="man-section-title">직원 사고 발생 시 Process</h2>
+      <p class="man-section-desc">사고 발생부터 사후관리까지, 9단계 대응 프로세스 요약입니다.</p>
+
+      <div class="man-process-flow">
+        <div class="man-process-step">
+          <div class="man-process-num">1</div>
+          <div class="man-process-body">
+            <h4>사고발생</h4>
+            <p>근로자 사고 발생</p>
+          </div>
+        </div>
+        <div class="man-process-step">
+          <div class="man-process-num">2</div>
+          <div class="man-process-body">
+            <h4>초동 대처</h4>
+            <p>병원 후송 · 진료/치료 및 증상 확인</p>
+          </div>
+        </div>
+        <div class="man-process-step">
+          <div class="man-process-num">3</div>
+          <div class="man-process-body">
+            <h4>1차 보고</h4>
+            <p>점장/부점장 → 파트장 보고<br>파트장 → 안전보건팀 사내메신저(팀즈) 공유<br>안전보건팀 사고내역 통계 관리</p>
+          </div>
+        </div>
+        <div class="man-process-step man-process-step-highlight">
+          <div class="man-process-num man-process-num-highlight">4</div>
+          <div class="man-process-body">
+            <h4>증빙자료 확보 <span class="new-badge">NEW</span></h4>
+            <p>CCTV 확보 (사고 정황에 맞게 유동적 구간) → 불명확 시 당일 근무자 전원 목격자 진술 → 필요 시 카톡·팀즈 등 대화 기록까지 확보</p>
+            <a href="#update2026" class="man-process-link">→ 하반기 개정 사항 (3단계 확보 가이드) 바로가기</a>
+          </div>
+        </div>
+        <div class="man-process-step">
+          <div class="man-process-num">5</div>
+          <div class="man-process-body">
+            <h4>근로자 면담</h4>
+            <p>파트장 근로자 면담 : 사고유형 선택, 재해 증상 등 확인</p>
+          </div>
+        </div>
+        <div class="man-process-step">
+          <div class="man-process-num">6</div>
+          <div class="man-process-body">
+            <h4>휴업 신청</h4>
+            <p>재해자 휴업 신청 : 산재, 공상, 출/퇴근 재해, 불인정</p>
+          </div>
+        </div>
+        <div class="man-process-step">
+          <div class="man-process-num">7</div>
+          <div class="man-process-body">
+            <h4>사고 경위 보고</h4>
+            <p>사고경위서 작성 (수시위험성평가 자동 생성 포함) 및 사업주 보고</p>
+          </div>
+        </div>
+        <div class="man-process-step">
+          <div class="man-process-num">8</div>
+          <div class="man-process-body">
+            <h4>재발방지대책 수립 및 이행</h4>
+            <p>TBM 활동 등 재발방지 조치</p>
+          </div>
+        </div>
+        <div class="man-process-step">
+          <div class="man-process-num">9</div>
+          <div class="man-process-body">
+            <h4>사후 관리</h4>
+            <p>사고 원인 수시 점검 등 예방 활동</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="man-ref-grid">
+        <a href="#classification" class="man-ref-chip">사고유형 종류</a>
+        <a href="#classification" class="man-ref-chip">산재/공상 기준</a>
+        <a href="#classification" class="man-ref-chip">휴업 신청 방법</a>
+        <a href="#risk-assessment" class="man-ref-chip">수시위험성평가 작성 방법</a>
+        <a href="#report-guide" class="man-ref-chip">사고경위서 작성 방법</a>
+        <a href="#prevention" class="man-ref-chip">사고 예방 관리</a>
+      </div>
+    </section>
+
+    <!-- 02 사고 구분 및 대응 기준 -->
+    <section id="classification" class="man-section">
+      <p class="man-section-eyebrow">CHAPTER 02</p>
+      <h2 class="man-section-title">사고 구분 및 대응 기준</h2>
+      <p class="man-section-desc">산업재해 보상제도 및 휴업 절차 안내</p>
+
+      <h3 class="man-sub-title">▣ 재해 발생 시 신청 항목</h3>
+      <div class="man-table-wrap">
+        <table class="man-data-table">
+          <thead><tr><th>구분</th><th>내용</th><th>비고</th></tr></thead>
+          <tbody>
+            <tr><td class="man-td-strong">산재 휴직</td><td>업무 중 사고·질병 발생 시 신청</td><td>근로복지공단 산재 접수 후 신청 가능 항목</td></tr>
+            <tr><td class="man-td-strong">업무 외 질병 휴직</td><td>업무 외 사고·질병 발생 시 신청</td><td>1인당 연간 최대 2개월</td></tr>
+            <tr><td class="man-td-strong">개인연차 / 계출원(병가)</td><td>휴직이 아닌 1일 단위 휴무 신청</td><td>회사 내부 규정 적용</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="man-note-line">※ 공통 사항 : 재해발생일은 병원 방문 시 정상근무 처리</p>
+
+      <h3 class="man-sub-title">▣ 재해 유형별 신청 세부 내용</h3>
+      <div class="man-table-wrap">
+        <table class="man-data-table">
+          <thead><tr><th>재해 구분</th><th>내용</th><th>휴업 신청 가능 항목</th><th>비고</th></tr></thead>
+          <tbody>
+            <tr><td class="man-td-strong man-tag-blue">산재</td><td>업무 중 사고·질병</td><td rowspan="2">산재휴직 또는 계출원(병가)</td><td rowspan="2">근로복지공단 승인 기준 보상</td></tr>
+            <tr><td class="man-td-strong man-tag-blue">출퇴근 재해</td><td>출퇴근 중 사고</td></tr>
+            <tr><td class="man-td-strong man-tag-gray">불인정 사고</td><td>업무 중 사고·질병 (재해자 주장)</td><td>개인연차/계출원(병가) 또는 업무 외 질병 휴직</td><td>위 동일하나, 당사에서 불인정 사유서 별도 첨부 제출</td></tr>
+            <tr>
+              <td class="man-td-strong man-tag-amber">공상</td>
+              <td>경미한 부상 및 산재 미신청</td>
+              <td>개인연차/계출원(병가)</td>
+              <td>① 2주 이내 치료 가능한 재해만 선택 가능 (의사소견 必)<br>② 치료를 위한 추가 휴식이 필요 시, 공상 신청 불가 → 산재로 전환</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 class="man-sub-title">▣ 산재 및 공상처리 기준 참고 자료</h3>
+      <p class="man-note-line">인사총무본부 총무관리부 안전보건팀 제공 별첨 자료입니다.</p>
+      <div class="man-img-showcase man-img-showcase-full">
+        <figure class="man-img-card">
+          <img src="assets/img/guide-sanjae-gongsang-1.jpeg" alt="산재 및 공상처리 기준 가이드 1" loading="lazy">
+        </figure>
+        <figure class="man-img-card">
+          <img src="assets/img/guide-sanjae-gongsang-2.jpeg" alt="산재 및 공상처리 기준 가이드 2" loading="lazy">
+        </figure>
+      </div>
+
+      <h3 class="man-sub-title">▣ 사고유형별 처리 절차</h3>
+      <div class="man-accordion" id="flowAccordion">
+
+        <div class="man-accordion-item">
+          <button class="man-accordion-head" type="button">
+            <span class="man-accordion-tag man-tag-blue">산재 처리 (사고/질병)</span>
+            <span class="man-accordion-label">넘어짐·떨어짐·베임 등 식별 가능한 사고 / 치료가 필요한 질병 발생 시</span>
+            <span class="man-accordion-arrow">▾</span>
+          </button>
+          <div class="man-accordion-panel">
+            <div class="man-flow-row">
+              <div class="man-flow-box">사고경위서 상신<br><small>(산업재해조사표 포함)</small></div>
+              <div class="man-flow-arrow">→</div>
+              <div class="man-flow-box">결재자 검토 및 승인<br><small>(부서/팀장, 안전보건팀, 대표이사 등)</small></div>
+              <div class="man-flow-arrow">→</div>
+              <div class="man-flow-box">재해자 근로복지공단<br>산업재해 신청<br><small>(재해자 본인 신청)</small></div>
+              <div class="man-flow-arrow">→</div>
+              <div class="man-flow-box">안전보건팀 고용노동부<br>산업재해조사표 상신<br><small>(재해발생일 기준 30일 이내)</small></div>
+              <div class="man-flow-arrow">→</div>
+              <div class="man-flow-box">보험가입자의견서 작성 요청<br><small>(공단→재해자·안전보건팀→파트장)</small></div>
+              <div class="man-flow-arrow">→</div>
+              <div class="man-flow-box">파트장 작성 후<br>안전보건팀 전달</div>
+              <div class="man-flow-arrow">→</div>
+              <div class="man-flow-box">안전보건팀 사업주 날인 후<br>근로복지공단 회신</div>
+              <div class="man-flow-arrow">→</div>
+              <div class="man-flow-box man-flow-box-end">근로복지공단<br>승인/불승인 판정</div>
+            </div>
+            <p class="man-note-line">⏱ 사고 발생 3일 이내 사고경위서 상신</p>
+          </div>
+        </div>
+
+        <div class="man-accordion-item">
+          <button class="man-accordion-head" type="button">
+            <span class="man-accordion-tag man-tag-amber">공상 처리</span>
+            <span class="man-accordion-label">3일 이상 휴업 발생 여부에 따라 절차 구분</span>
+            <span class="man-accordion-arrow">▾</span>
+          </button>
+          <div class="man-accordion-panel">
+            <p class="man-flow-sub-label">· 3일 이상 휴업 발생 시</p>
+            <div class="man-flow-row">
+              <div class="man-flow-box">사고경위서 상신<br><small>(산업재해조사표 포함)</small></div>
+              <div class="man-flow-arrow">→</div>
+              <div class="man-flow-box">결재자 검토 및 승인</div>
+              <div class="man-flow-arrow">→</div>
+              <div class="man-flow-box man-flow-box-end">안전보건팀 고용노동부<br>산업재해조사표 상신<br><small>(재해발생일 기준 30일 이내)</small></div>
+            </div>
+            <p class="man-flow-sub-label">· 3일 이상 휴업 발생하지 않을 시</p>
+            <div class="man-flow-row">
+              <div class="man-flow-box">사고경위서 상신<br><small>(산업재해조사표 포함)</small></div>
+              <div class="man-flow-arrow">→</div>
+              <div class="man-flow-box man-flow-box-end">결재자 검토 및 승인</div>
+            </div>
+            <div class="man-callout man-callout-info">
+              <p><strong>※ 참고</strong> 공상처리는 재해자 의사를 반영해 산재를 원치 않는 경우로, 산업재해조사표 작성 의무는 없으나 추후 산재를 신청하는 경우에 대비해 작성해 둡니다.</p>
+              <p class="man-callout-example">대표 사례 : A직원이 공상을 원해 공상처리를 진행했으나, 퇴사 후 별도로 산재를 신청해 2중으로 보상을 받으려 한 사례</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="man-accordion-item">
+          <button class="man-accordion-head" type="button">
+            <span class="man-accordion-tag man-tag-blue">출·퇴근 재해</span>
+            <span class="man-accordion-label">회사 관할 여부에 따라 사고경위서 작성 여부가 구분됩니다</span>
+            <span class="man-accordion-arrow">▾</span>
+          </button>
+          <div class="man-accordion-panel">
+
+            <div class="man-split-compare">
+              <div class="man-split-col man-split-col-yes">
+                <p class="man-split-col-title">✅ 사고경위서 작성 대상</p>
+                <ul class="man-guide-list-compact">
+                  <li>회사에서 제공한 교통수단으로 출퇴근하다 재해 발생 <small>(유류비 지원은 제외)</small></li>
+                  <li>회사 관할 구간에서 발생한 사고 <small>(예: 매장에 출근하여 사무실로 이동하는 계단에서 다침)</small></li>
+                </ul>
+              </div>
+              <div class="man-split-col man-split-col-no">
+                <p class="man-split-col-title">🚫 사고경위서 작성 불필요</p>
+                <ul class="man-guide-list-compact">
+                  <li>회사에서 제공하지 않은 교통수단 이용 중 사고 <small>(대중교통, 자전거, 자차 등)</small></li>
+                  <li>출근길·퇴근길 도중 발생한 사고 <small>(길거리 등 회사 관할 밖)</small></li>
+                </ul>
+              </div>
+            </div>
+
+            <p class="man-flow-sub-label">· 사고경위서 작성 대상인 경우</p>
+            <div class="man-flow-row">
+              <div class="man-flow-box">사고경위서 상신<br><small>(산업재해조사표 미포함)</small></div>
+              <div class="man-flow-arrow">→</div>
+              <div class="man-flow-box">결재자 검토 및 승인</div>
+              <div class="man-flow-arrow">→</div>
+              <div class="man-flow-box">재해자 근로복지공단<br>산업재해 신청<br><small>(재해자 본인 신청)</small></div>
+              <div class="man-flow-arrow">→</div>
+              <div class="man-flow-box">보험가입자의견서 등<br>작성 요청</div>
+              <div class="man-flow-arrow">→</div>
+              <div class="man-flow-box">파트장 작성 후<br>안전보건팀 전달</div>
+              <div class="man-flow-arrow">→</div>
+              <div class="man-flow-box man-flow-box-end">근로복지공단<br>승인/불승인 판정</div>
+            </div>
+
+            <p class="man-flow-sub-label">· 사고경위서 작성 대상이 아닌 경우</p>
+            <div class="man-flow-row">
+              <div class="man-flow-box man-flow-box-end">해당 내용 안전보건팀 공유<br><small>(팀즈 또는 메신저 등)</small></div>
+            </div>
+            <p class="man-note-line">사고경위서 작성 없이, 사고 사실만 안전보건팀에 공유하면 됩니다.</p>
+          </div>
+        </div>
+
+        <div class="man-accordion-item">
+          <button class="man-accordion-head" type="button">
+            <span class="man-accordion-tag man-tag-gray">불인정 사고</span>
+            <span class="man-accordion-label">사고에 대해 객관적으로 확인이 불가한 경우</span>
+            <span class="man-accordion-arrow">▾</span>
+          </button>
+          <div class="man-accordion-panel">
+            <div class="man-flow-row">
+              <div class="man-flow-box">사고경위서 상신<br><small>(산업재해조사표 포함)</small></div>
+              <div class="man-flow-arrow">→</div>
+              <div class="man-flow-box">결재자 검토 및 승인</div>
+              <div class="man-flow-arrow">→</div>
+              <div class="man-flow-box">재해자 근로복지공단<br>산업재해 신청</div>
+              <div class="man-flow-arrow">→</div>
+              <div class="man-flow-box">보험가입자의견서 등<br>작성 요청</div>
+              <div class="man-flow-arrow">→</div>
+              <div class="man-flow-box">파트장 작성 후<br><small>(불인정 별지 작성 포함)</small><br>안전보건팀 전달</div>
+              <div class="man-flow-arrow">→</div>
+              <div class="man-flow-box">사업주 날인 후<br>근로복지공단 회신</div>
+              <div class="man-flow-arrow">→</div>
+              <div class="man-flow-box man-flow-box-end">근로복지공단<br>승인/불승인 판정</div>
+            </div>
+            <p class="man-note-line">⏱ 사고 발생 3일 이내</p>
+          </div>
+        </div>
+
+        <div class="man-accordion-item">
+          <button class="man-accordion-head" type="button">
+            <span class="man-accordion-tag man-tag-red">지연 보고 사고</span>
+            <span class="man-accordion-label">업무 중 사고 및 질병성 사고를 뒤늦게 인지한 경우</span>
+            <span class="man-accordion-arrow">▾</span>
+          </button>
+          <div class="man-accordion-panel">
+            <div class="man-flow-row">
+              <div class="man-flow-box">사고경위서 상신<br><small>(제출기한 지연 소명서 포함)</small></div>
+              <div class="man-flow-arrow">→</div>
+              <div class="man-flow-box">결재자 검토 및 승인</div>
+              <div class="man-flow-arrow">→</div>
+              <div class="man-flow-box man-flow-box-end">안전보건팀 고용노동부<br>산업재해조사표 및<br>지연 소명서 상신<br><small>(재해발생일 기준 30일 이내)</small></div>
+            </div>
+            <p class="man-note-line">⏱ 사고 인지 3일 이내</p>
+            <div class="man-callout man-callout-warn">
+              <p><strong>※ 대표 사례</strong></p>
+              <p>① 재해자 측 사고 후 보고하지 않고, 퇴사 후 산업재해를 신청한 사례</p>
+              <p>② 재해자는 점장/부점장에게 보고했지만, 점장/부점장이 파트장에게 보고하지 않은 사례</p>
+              <p>③ 장기간 업무 수행으로 근골격계 질환이 발병했으나 만성으로 인해 사고로 판단하지 못한 사례</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- 하반기 개정 사항 -->
+    <section id="update2026" class="man-section man-update-section">
+      <p class="man-section-eyebrow">2026년 하반기 개정</p>
+      <h2 class="man-section-title">⭐ 하반기 산업재해 매뉴얼 개선 사항</h2>
+      <p class="man-section-desc">근로자 진술만으로 산업재해조사표를 기계적으로 제출하기보다, 사실관계 확인 및 반론 가능한 객관자료를 확보하여 보험가입자 의견서 제출 시 적극 활용합니다.</p>
+
+      <h3 class="man-sub-title">🔎 왜 개정이 필요한가 (문제의 근본 원인)</h3>
+      <div class="man-callout man-callout-warn">
+        <p><strong>지금까지는 CCTV·목격자 진술 등 객관적 증빙자료를 확보하는 절차 자체가 없었습니다.</strong> 그 결과 근로복지공단에 보험가입자의견서를 제출할 때 사업주 입장에서 반박하거나 사실관계를 확인할 근거자료가 아무것도 없었고, 결국 근로자가 주장하는 내용을 그대로 받아들여 의견서를 작성해온 것이 반복된 패턴이었습니다.</p>
+        <p class="man-callout-example">즉, "증빙자료 미확보 → 반론 근거 없음 → 근로자 주장을 그대로 인정" 이라는 구조적 문제가 있었습니다.</p>
+      </div>
+
+      <div class="man-split-compare">
+        <div class="man-split-col man-split-col-no">
+          <p class="man-split-col-title">AS-IS (기존)</p>
+          <ul class="man-guide-list-compact">
+            <li>CCTV 확보 절차 없음 (사고 인지 후 시간이 지나면 영상 삭제되어 확인 불가)</li>
+            <li>목격자 진술도 형식적으로 1명만 받거나 생략</li>
+            <li>카톡·팀즈 등 대화 기록 확인 절차 없음</li>
+            <li>결과적으로 근로자 진술이 유일한 근거 → 사업주는 반론 불가</li>
+            <li>보험가입자의견서 = 근로자 주장을 그대로 인정하는 형식적 절차</li>
+          </ul>
+        </div>
+        <div class="man-split-col man-split-col-yes">
+          <p class="man-split-col-title">TO-BE (개정 후)</p>
+          <ul class="man-guide-list-compact">
+            <li>재해발생 인지 즉시 CCTV 영상 확보 (이상유무 포착 또는 정상 행동 영상)</li>
+            <li>재해자를 제외한 해당일 출근 근로자 전원의 목격자 진술서 + 출근부 확보</li>
+            <li>점장/부점장에게 공유된 보고 기록(카톡·팀즈·라인 등) 및 구두 소통 내용 확보</li>
+            <li>사업주가 사실관계를 판단할 수 있는 객관자료를 보유</li>
+            <li>보험가입자의견서 = 확보된 근거자료를 토대로 한 실질적 의견 제출</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="man-callout man-callout-highlight">
+        <p><strong>변경 Point</strong> 근로자 진술만으로 산업재해조사표를 기계적으로 제출하기보다, 사실관계 확인 및 반론 가능한 객관자료를 확보하여 보험가입자 의견서 제출 시 적극 활용 필요</p>
+      </div>
+
+      <h3 class="man-sub-title">① 공통 증빙자료 확보 기준</h3>
+      <div class="man-table-wrap">
+        <table class="man-data-table">
+          <thead><tr><th>구분</th><th>확보자료</th><th>핵심 기준</th></tr></thead>
+          <tbody>
+            <tr><td class="man-td-strong man-tag-red">필수</td><td>CCTV 영상</td><td>사고 판단 불가·영상 없음 시 당일 근무현황 영상에서 이상유무(통증 호소 등) 포착 / 없으면 정상 행동 영상 확보</td></tr>
+            <tr><td class="man-td-strong man-tag-red">필수</td><td>목격자 진술서</td><td>재해자 제외 해당일 출근한 근로자 전원 + 출근부 첨부</td></tr>
+            <tr><td class="man-td-strong man-tag-red">필수</td><td>공유받은 기록 내용</td><td>재해자 → 점장/부점장 보고 기록 (카톡·팀즈·라인 등) + 구두 보고 시 소통 내용</td></tr>
+            <tr><td class="man-td-strong man-tag-gray">초기자료 제외</td><td>진단서</td><td>초기 필수자료에서 제외 (지연·불필요한 산재/공상 요구 방지)</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 class="man-sub-title">② 재해 유형별 처리 방향</h3>
+      <div class="man-table-wrap">
+        <table class="man-data-table">
+          <thead><tr><th>재해 유형</th><th>예시</th><th>처리 기준</th></tr></thead>
+          <tbody>
+            <tr><td class="man-td-strong man-tag-blue">명확한 사고</td><td>넘어짐·떨어짐<br>베임·부딫힘</td><td>근거가 명확할 시 현행 절차 유지</td></tr>
+            <tr>
+              <td class="man-td-strong man-tag-amber">질병성 사고<br><small>(개인지병 or 근골)</small></td>
+              <td>복통·열사병<br>뇌심혈관 등<br><br>방아쇠수근군<br>허리디스크 등</td>
+              <td>사고경위서 작성<br>산재신청 전까지 산재조사표 제출 보류</td>
+            </tr>
+            <tr><td class="man-td-strong man-tag-gray">무리한 동작 호소</td><td>허리 삐끗<br>무릎 통증 등</td><td>CCTV·목격자 진술서·공유받은 기록 등<br>객관자료 확인 후 판단</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 id="evidence-checklist" class="man-sub-title">③ 재해발생 사실을 인지한 시점부터 확보할 자료</h3>
+      <p class="man-section-desc">사고 발생 시 정확한 사실관계 확인과 원활한 사후 대응을 위해, 현장에서 아래 자료가 누락되지 않도록 확보합니다.</p>
+
+      <div class="man-evidence-cards">
+
+        <div class="man-evidence-card">
+          <div class="man-evidence-icon">🎥</div>
+          <div class="man-evidence-body">
+            <h4>① CCTV 영상 확보</h4>
+            <p>사고 영상 판단이 불가하거나 영상이 없는 경우, 그날 당일 근무현황 CCTV 영상을 검토하여 이상유무(통증을 호소하는 장면 등)를 포착한 영상을 첨부합니다.</p>
+            <p>사고 상황의 영상이 없을 시, 정상적인 행동을 하는 업무 영상을 수집합니다.<br><small>예 : 근로자가 허리가 삐끗하였다고 보고했으나, 근무 영상에는 정상적으로 진열 또는 보행하는 영상을 수집</small></p>
+            <p class="man-evidence-note">※ 향후 보험가입자의견서 제출 시 사실관계 확인자료로 활용되므로, 영상의 날짜·시간이 확인되도록 저장 (용량이 큰 경우 휴대폰 촬영 영상도 가능)</p>
+          </div>
+        </div>
+
+        <div class="man-evidence-card">
+          <div class="man-evidence-icon">🗣️</div>
+          <div class="man-evidence-body">
+            <h4>② 목격자 진술서 확보</h4>
+            <p>사고 당일 재해자를 제외한 해당 매장 근로자 중 출근한 전원의 목격자 진술서를 확보합니다 (해당일 출근부 첨부).</p>
+            <p>목격한 사실과 재해자의 재해사실에 관한 진술 내용이 있는지/없는지를 확인하기 위함입니다.</p>
+          </div>
+        </div>
+
+        <div class="man-evidence-card">
+          <div class="man-evidence-icon">💬</div>
+          <div class="man-evidence-body">
+            <h4>③ 공유받은 기록 내용 확보</h4>
+            <p>재해자와의 면담 내용을 점장/부점장에게 카톡·팀즈·라인방 등으로 재해사실을 공유한 기록 여부를 확보합니다.</p>
+            <p>최초 보고받는 자는 파트장/팀장/부서장 단위보다 <strong>직상위자(점장/부점장)</strong>이므로 해당 재해사실 확보가 필요합니다.</p>
+            <p>유선 또는 구두로 보고받은 점장이 파트장에게 재해사실을 연락한 소통 내용도 함께 확보합니다.</p>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="man-callout man-callout-info">
+        <p>위 자료들은 재해자의 주장을 부정하기 위한 목적이 아니라, 사고 발생 당시의 사실관계를 객관적으로 확인하기 위한 자료입니다. 향후 산재 신청 또는 보험가입자의견서 제출 시, 확보된 자료를 바탕으로 사고 경위와 사실관계를 명확히 설명할 수 있습니다.</p>
+      </div>
+    </section>
+
+    <!-- 03 사고경위서 작성 Guide -->
+    <section id="report-guide" class="man-section">
+      <p class="man-section-eyebrow">CHAPTER 03</p>
+      <h2 class="man-section-title">사고경위서 및 첨부파일 작성 Guide</h2>
+      <p class="man-section-desc">2026년 4월, 사고경위서 작성 프로세스가 HR 시스템 기반으로 전면 개편되었습니다.</p>
+
+      <div class="man-callout man-callout-highlight">
+        <p><strong>핵심 변화 포인트</strong> "수기·포탈 입력 → HR 기반 자동화로 전환" (중복 입력 제거 + 처리속도 개선)</p>
+      </div>
+
+      <h3 class="man-sub-title">▣ 개정 개요</h3>
+      <p class="man-note-line">기존에는 매장에서 산업재해조사표·수시위험성평가·공유서명록 등을 개별 수기로 작성한 후 전자결재로 상신하고, 최종 결재 완료 후 안전보건팀이 산업재해조사표를 제출하는 방식으로 운영되었습니다. 사고 발생 초기부터 다수의 서류를 수작업으로 작성해야 해 현장·관리자의 업무 부담이 컸습니다.</p>
+      <p class="man-note-line">이에 따라 산업재해 보고 및 제출 프로세스를 <strong>전산화·표준화</strong>하여, 사고 초기 대응부터 제출 완료까지 HR 시스템으로 일원화했습니다.</p>
+
+      <div class="man-split-compare">
+        <div class="man-split-col man-split-col-no">
+          <p class="man-split-col-title">변경 전 (AS-IS)</p>
+          <ul class="man-guide-list-compact">
+            <li>매장 → 포탈 중심 수기 + 직접 입력 방식</li>
+            <li>사고 발생 시 위험성평가, 조사표, 공유서명 등 개별 작성</li>
+            <li>근태/인적사항 등 중복 입력 발생</li>
+            <li>자료 취합 및 결재까지 수작업 + 단계별 전달 (시간 지연)</li>
+            <li>결재 완료까지 <strong>3~5일</strong>, 제출까지 <strong>7~14일</strong> 소요</li>
+          </ul>
+        </div>
+        <div class="man-split-col man-split-col-yes">
+          <p class="man-split-col-title">변경 후 (TO-BE)</p>
+          <ul class="man-guide-list-compact">
+            <li>HR 시스템 기반으로 전환</li>
+            <li>근태 / 개인정보 / 조직정보 → 자동 연동 (입력 제거)</li>
+            <li>사고 입력만 하면 관련 정보 자동 불러오기</li>
+            <li>작성 - 결재 - 제출까지 일원화된 전산 프로세스</li>
+            <li>결재 완료까지 <strong>1~2일</strong>로 단축</li>
+          </ul>
+        </div>
+      </div>
+
+      <h3 class="man-sub-title">▣ 사고경위서 작성 방법 (HR 시스템)</h3>
+
+      <div class="man-accordion" id="docAccordion">
+
+        <div class="man-accordion-item open">
+          <button class="man-accordion-head" type="button">
+            <span class="man-accordion-tag man-tag-blue">STEP 1. 시스템 접속</span>
+            <span class="man-accordion-label">HR 시스템 &gt; 안전보건 &gt; 사고보고-사고경위서 작성</span>
+            <span class="man-accordion-arrow">▾</span>
+          </button>
+          <div class="man-accordion-panel">
+            <ol class="man-guide-list">
+              <li>HR 시스템 내 상단 <strong>안전보건 &gt; 사고보고-사고경위서 작성</strong> 선택</li>
+              <li>생성된 페이지 우측 <strong>신규 신청</strong> 선택</li>
+            </ol>
+            <div class="man-img-showcase">
+              <figure class="man-img-card">
+                <img src="assets/img/guide2026-step1-menu.png" alt="HR 시스템 사고경위서 작성 메뉴 진입" loading="lazy">
+                <figcaption>안전보건 &gt; 사고보고-사고경위서 작성 &gt; 신규 신청</figcaption>
+              </figure>
+            </div>
+          </div>
+        </div>
+
+        <div class="man-accordion-item">
+          <button class="man-accordion-head" type="button">
+            <span class="man-accordion-tag man-tag-blue">STEP 2. 기본정보 입력</span>
+            <span class="man-accordion-label">매장명·근로자수·소재지·근속기간·상해정보 등 필수 항목</span>
+            <span class="man-accordion-arrow">▾</span>
+          </button>
+          <div class="man-accordion-panel">
+            <ol class="man-guide-list">
+              <li><strong>매장명 및 성명</strong> — 검색/선택</li>
+              <li><strong>근로자수</strong> — 매장 내 상시근로자 수 작성</li>
+              <li><strong>소재지</strong> — 매장 주소 작성</li>
+              <li><strong>같은 종류 업무 근속기간</strong> — 확인 불가 시 "1개월"로 작성</li>
+              <li><strong>상해종류 및 상해부위</strong> — 진단서 내용을 첨부하는 것이 원칙이나, 진단서 미첨부 시 대략적으로 작성 가능
+                <br><small>예) 매장 이동 중 박스에 걸려 넘어져 발목에 통증 발생 → 상해종류 : 염좌 혹은 통증 / 상해부위 : 발목</small>
+              </li>
+              <li><strong>휴업예상</strong> — 실제 휴업일 작성 (휴업 미발생 시 "0" 기재)</li>
+            </ol>
+            <div class="man-callout man-callout-warn">
+              <p><strong>★ 위 사항 미작성 시 결재 불가 (필수항목)</strong></p>
+            </div>
+            <div class="man-img-showcase man-img-showcase-full">
+              <figure class="man-img-card">
+                <img src="assets/img/guide2026-step2-basicinfo.png" alt="기본정보 입력 화면" loading="lazy">
+                <figcaption>기본정보 입력 화면</figcaption>
+              </figure>
+            </div>
+          </div>
+        </div>
+
+        <div class="man-accordion-item">
+          <button class="man-accordion-head" type="button">
+            <span class="man-accordion-tag man-tag-blue">STEP 3. 사고 경위 작성</span>
+            <span class="man-accordion-label">발생 경위·원인·방지대책 작성 후 임시저장(必)</span>
+            <span class="man-accordion-arrow">▾</span>
+          </button>
+          <div class="man-accordion-panel">
+            <ol class="man-guide-list">
+              <li><strong>사고 발생 경위</strong> — 재해 사실 그대로 작성</li>
+              <li><strong>발생원인 및 방지대책</strong> — 작성 자료는 수시위험성평가 자료로 자동 입력됨 (수정 가능하며, 등급 작성 필요)</li>
+              <li><strong>작성 후 임시저장(必)</strong> — 임시저장을 하면 안전보건팀에서 재해조사표를 사전 제출할 수 있음</li>
+            </ol>
+            <div class="man-img-showcase">
+              <figure class="man-img-card">
+                <img src="assets/img/guide2026-step3-description.png" alt="사고 발생 경위 작성 화면" loading="lazy">
+                <figcaption>사고 발생 경위 작성</figcaption>
+              </figure>
+              <figure class="man-img-card">
+                <img src="assets/img/guide2026-step3-riskauto.png" alt="수시위험성평가 자동 입력 화면" loading="lazy">
+                <figcaption>발생원인·방지대책 → 수시위험성평가 자동 입력</figcaption>
+              </figure>
+              <figure class="man-img-card">
+                <img src="assets/img/guide2026-step3-tempsave.png" alt="임시저장 화면" loading="lazy">
+                <figcaption>작성 후 임시저장(必)</figcaption>
+              </figure>
+            </div>
+          </div>
+        </div>
+
+        <div class="man-accordion-item">
+          <button class="man-accordion-head" type="button">
+            <span class="man-accordion-tag man-tag-amber">STEP 4. 첨부파일 및 결재 상신</span>
+            <span class="man-accordion-label">필수·선택 첨부파일 구비 후 포탈 결재 상신</span>
+            <span class="man-accordion-arrow">▾</span>
+          </button>
+          <div class="man-accordion-panel">
+            <ol class="man-guide-list">
+              <li><strong>결재 요청 시</strong> HR &gt; 포탈 연동</li>
+              <li><strong>첨부파일</strong> 포탈 결재에 첨부 후 결재 상신</li>
+            </ol>
+            <div class="man-table-wrap">
+              <table class="man-data-table">
+                <thead><tr><th>✅ 첨부파일 목록</th><th>필수사항</th><th>선택사항</th></tr></thead>
+                <tbody>
+                  <tr><td class="man-td-strong">①</td><td class="man-tag-red">사고사진 (환경 등)</td><td class="man-tag-gray">진단서</td></tr>
+                  <tr><td class="man-td-strong">②</td><td class="man-tag-red">사고영상 <a href="#evidence-checklist" class="man-table-jump-btn">확보 기준 →</a></td><td>-</td></tr>
+                  <tr><td class="man-td-strong">③</td><td class="man-tag-red">수시위험성평가 서명록</td><td>-</td></tr>
+                  <tr><td class="man-td-strong">④</td><td class="man-tag-red">목격자 진술서 <a href="#evidence-checklist" class="man-table-jump-btn">확보 기준 →</a></td><td>-</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <p class="man-note-line">※ 사고영상 촬영이 안 되는 장소는 제외. 또한 근로자가 진단서를 제출할 경우 첨부</p>
+            <div class="man-callout man-callout-warn">
+              <p><strong>★ 결재상신은 첨부자료 구비 후 상신 (必)</strong></p>
+            </div>
+            <div class="man-img-showcase man-img-showcase-full">
+              <figure class="man-img-card">
+                <img src="assets/img/guide2026-step4-attachments.png" alt="첨부파일 목록 화면" loading="lazy">
+                <figcaption>첨부파일 목록 (필수/선택 구분)</figcaption>
+              </figure>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <h3 class="man-sub-title">▣ 변경 전 / 후 비교</h3>
+      <div class="man-img-showcase man-img-showcase-full">
+        <figure class="man-img-card">
+          <img src="assets/img/guide2026-before.png" alt="변경 전 화면" loading="lazy">
+          <figcaption>변경 전</figcaption>
+        </figure>
+        <figure class="man-img-card">
+          <img src="assets/img/guide2026-after.png" alt="변경 후 화면" loading="lazy">
+          <figcaption>변경 후</figcaption>
+        </figure>
+      </div>
+
+      <h3 class="man-sub-title">▣ 보고현황 관리</h3>
+      <p class="man-note-line">HR 시스템 내 상단 <strong>안전보건 &gt; 사고보고관리</strong> 선택 시, 작성된 사고 자료를 확인할 수 있습니다.</p>
+      <div class="man-img-showcase">
+        <figure class="man-img-card">
+          <img src="assets/img/guide2026-report-status.png" alt="보고현황 관리 화면" loading="lazy">
+          <figcaption>사고보고관리 화면</figcaption>
+        </figure>
+        <figure class="man-img-card">
+          <img src="assets/img/guide2026-risk-data.png" alt="수시위험성평가 자료 화면" loading="lazy">
+          <figcaption>📌 수시위험성평가 자료 — 유해위험요인, 위험성등급, 개선방안, 개선 후 등급 확인 및 저장</figcaption>
+        </figure>
+        <figure class="man-img-card">
+          <img src="assets/img/guide2026-sanjae-auto.png" alt="산업재해조사표 자동 작성 화면" loading="lazy">
+          <figcaption>매장 담당자 사고경위서 작성본을 토대로 산업재해조사표 자동 작성 (안전보건팀에서 선제적으로 고용노동부에 제출)</figcaption>
+        </figure>
+      </div>
+
+    </section>
+
+    <!-- 04 수시 위험성평가 -->
+    <section id="risk-assessment" class="man-section">
+      <p class="man-section-eyebrow">CHAPTER 04</p>
+      <h2 class="man-section-title">수시 위험성평가 작성 Guide</h2>
+
+      <div class="man-callout man-callout-info">
+        <p><strong>법적 근거</strong> 산업안전보건법 제36조(위험성평가의 실시) 및 시행규칙 제37조(위험성평가 실시 내용 및 결과의 기록·보존)에 의거하여 최초, 수시, 정기 위험성평가를 실시합니다.</p>
+        <p><strong>목적</strong> 사업장 내에서 사업주와 근로자가 함께 산업재해가 발생할 수 있는 유해·위험요인을 찾아내어 누구도 다치지 않도록 하는 것</p>
+      </div>
+
+      <div class="man-table-wrap">
+        <table class="man-data-table">
+          <thead><tr><th>구분</th><th>내용</th><th>실행 시기</th></tr></thead>
+          <tbody>
+            <tr><td class="man-td-strong">최초 평가</td><td>매장 신규 오픈 시 최초 시행</td><td>오픈일로부터 3개월 이내</td></tr>
+            <tr><td class="man-td-strong man-tag-red">수시 평가</td><td>산업재해, 리뉴얼 등 시에 시행</td><td>산업재해 발생 후 / 리뉴얼 전</td></tr>
+            <tr><td class="man-td-strong">정기 평가</td><td>정기적으로 유해위험요인 파악 및 위험성 결정, 개선 실시</td><td>연 2회 이상</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="man-callout man-callout-highlight">
+        <p><strong>2026년 개정 사항</strong> 수시 위험성평가는 이제 HR 시스템에서 <strong>사고경위서 작성과 동시에 자동 생성</strong>됩니다 (챕터 03 STEP 3 참고). 6단계 수기 작성 절차는 사라졌으며, 남은 실무는 <strong>결과 공유 및 서명 확보</strong>입니다.</p>
+      </div>
+
+      <h3 class="man-sub-title">▣ 수시 위험성평가 : 언제 · 어떻게</h3>
+      <div class="man-mini-cards man-mini-cards-2">
+        <div class="man-mini-card">
+          <div class="man-mini-card-num">언제</div>
+          <p>사고경위서 작성(STEP 3) 시 자동 생성</p>
+        </div>
+        <div class="man-mini-card">
+          <div class="man-mini-card-num">어떻게</div>
+          <p>발생원인·방지대책 작성 내용이 위험성평가 자료로 자동 입력, 등급 확인·수정</p>
+        </div>
+      </div>
+
+      <h3 class="man-sub-title">▣ 자동 생성 이후 진행 사항 — 결과 공유 및 서명 확보</h3>
+      <div class="man-table-wrap">
+        <table class="man-data-table">
+          <thead><tr><th>순서</th><th>내용</th><th>비고</th></tr></thead>
+          <tbody>
+            <tr><td class="man-td-strong man-tag-gray">자동 생성</td><td>사고경위서 STEP 3 작성 시 유해·위험요인 파악, 위험성 결정, 감소대책까지 자동 입력</td><td>등급 확인·수정</td></tr>
+            <tr><td class="man-td-strong man-tag-red">결과 공유</td><td>생성된 위험성평가 결과를 매장 전직원에게 공유</td><td>사고경위서에 첨부되는 서명록으로 확인</td></tr>
+            <tr><td class="man-td-strong man-tag-red">서명 확보</td><td>공유받은 전직원의 서명을 받아 서명록 완성</td><td>사고경위서 첨부파일 필수 항목</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3 class="man-sub-title">▣ 수시 위험성평가 흐름도 (2026 개정)</h3>
+      <div class="man-flow-row man-flow-row-wrap">
+        <div class="man-flow-box man-flow-box-pill">산재 발생</div>
+        <div class="man-flow-arrow">→</div>
+        <div class="man-flow-box man-flow-box-pill">응급 처치<br><small>피해 정도에 따라 현장 처치 또는 병원 후송</small></div>
+        <div class="man-flow-arrow">→</div>
+        <div class="man-flow-box man-flow-box-pill">사고경위서 작성<br><small>(위험성평가 자동 생성)</small></div>
+        <div class="man-flow-arrow">→</div>
+        <div class="man-flow-box man-flow-box-pill">매장 소속 직원 공유</div>
+        <div class="man-flow-arrow">→</div>
+        <div class="man-flow-box man-flow-box-pill man-flow-box-end">서명록 확보 및 첨부</div>
+      </div>
+
+    </section>
+
+    <!-- 05 사고 예방관리 -->
+    <section id="prevention" class="man-section">
+      <p class="man-section-eyebrow">CHAPTER 05</p>
+      <h2 class="man-section-title">사고에 대한 예방 관리</h2>
+
+      <div class="man-callout man-callout-highlight">
+        <p><strong>개인부주의가 주요 원인으로 발생 → 사전예방을 최우선으로</strong><br>당사는 개인 부주의 성향이 확인되어, 사전예방(작업 전 점검·위험 제거·현장 참여)이 재해 감소의 핵심입니다.</p>
+      </div>
+
+      <h3 class="man-sub-title">▣ 안전 습관화 : TBM (Tool Box Meeting / 위험예지훈련)</h3>
+      <div class="man-mini-cards man-mini-cards-2">
+        <div class="man-mini-card">
+          <h4>TBM 정의</h4>
+          <p>작업 시작 전 또는 작업 중 조·중례 시간에 관리자(조장, 매니저 등)를 중심으로 근무자들이 모여 당일 작업 내용과 안전작업절차, 위험요소/주의사항을 공유하고 핵심 구호를 외쳐 안전을 숙지하고 직접 참여하는 활동</p>
+        </div>
+        <div class="man-mini-card">
+          <h4>TBM 목적</h4>
+          <p>반복적인 메시지 전달 → 근무자 위험요인 인식 및 대처능력 향상 → 사고 및 중대재해 예방</p>
+        </div>
+      </div>
+
+      <h4 class="man-mini-title">TBM 핵심 요소</h4>
+      <ul class="man-guide-list">
+        <li><strong>참여와 소통</strong> — 일방적 전달이 아닌, 모두가 의견을 나누고 참여하여 현장 위험 요소를 찾아낸다</li>
+        <li><strong>현장 중심 소통</strong> — 위험을 현실적으로 다루고, 작업자들이 스스로 해결책을 찾도록 권한다</li>
+        <li><strong>지속적인 실천</strong> — 일회성으로 그치지 않으며, 매일 반복적으로 습관으로 정착시킨다</li>
+      </ul>
+
+      <h3 class="man-sub-title">▣ 작업 전 예방관리</h3>
+
+      <div class="man-prevention-block">
+        <h4 class="man-mini-title">작업장 내 통행로 확보</h4>
+        <p class="man-prevention-desc">교통사고는 도로상에서만 일어나는 것이 아니고, 지게차·구내 운반차·화물자동차 등 차량계 하역 운반기계로 하는 작업이 많은 공장·사업장 내에서도 발생하기 쉽습니다. 작업자와 운반기계가 교행하지 않도록 별도의 통로를 만들고, 해당 통로에 안전표시를 명시해야 합니다.</p>
+        <div class="man-img-showcase">
+          <figure class="man-img-card"><img src="assets/img/prevention-passage-1.jpeg" alt="제조·물류 통행로 예시" loading="lazy"><figcaption>제조·물류 예시</figcaption></figure>
+          <figure class="man-img-card"><img src="assets/img/prevention-passage-2.jpeg" alt="건설업 통행로 예시" loading="lazy"><figcaption>건설업 예시</figcaption></figure>
+          <figure class="man-img-card"><img src="assets/img/prevention-passage-3.jpeg" alt="주차장 통행로 예시" loading="lazy"><figcaption>주차장 예시</figcaption></figure>
+        </div>
+      </div>
+
+      <div class="man-prevention-block">
+        <h4 class="man-mini-title">작업장 정리정돈</h4>
+        <ul class="man-guide-list">
+          <li>근로자가 작업장에서 넘어지거나 미끄러지는 등의 위험이 없도록 작업장 바닥 등을 안전하고 청결한 상태로 유지</li>
+          <li>제품, 자재, 부재 등이 넘어지지 않도록 붙들어 지탱하게 하는 등 안전조치</li>
+          <li>근로자가 작업하는 장소를 항상 청결하게 유지관리하며, 폐기물은 정해진 장소에만 버림</li>
+        </ul>
+        <div class="man-img-showcase">
+          <figure class="man-img-card"><img src="assets/img/prevention-tidy-1.png" alt="작업장 정리정돈 예시 1" loading="lazy"></figure>
+          <figure class="man-img-card"><img src="assets/img/prevention-tidy-2.png" alt="작업장 정리정돈 예시 2" loading="lazy"></figure>
+        </div>
+      </div>
+
+      <div class="man-prevention-block">
+        <h4 class="man-mini-title">전기 기계·기구 취급 예방 조치</h4>
+        <ul class="man-guide-list">
+          <li>분전반의 덮개를 열어 놓은 채 두지 않기</li>
+          <li>분전반 주변에 물건을 놓지 않기</li>
+          <li>정전 시 또는 문제 발생 시 지정된 인원 외 조작 금지</li>
+          <li>콘센트 사용 시 과전류 방지를 위해 문어발식 배선 금지</li>
+          <li>콘센트 손상 유무 확인 시 즉시 교체</li>
+          <li>어린이 감전사고 예방을 위해 콘센트 덮개 설치</li>
+          <li>젖은 손으로 플러그나 스위치를 잡지 않기</li>
+        </ul>
+        <div class="man-img-showcase">
+          <figure class="man-img-card"><img src="assets/img/prevention-electric-1.jpeg" alt="분전반 개방 금지" loading="lazy"><figcaption>분전반 개방 금지</figcaption></figure>
+          <figure class="man-img-card"><img src="assets/img/prevention-electric-2.jpeg" alt="문어발식 사용 금지" loading="lazy"><figcaption>문어발식 사용 금지</figcaption></figure>
+          <figure class="man-img-card"><img src="assets/img/prevention-electric-3.jpeg" alt="콘센트 손상 확인" loading="lazy"><figcaption>콘센트 손상 유무 확인 / 폐기</figcaption></figure>
+        </div>
+      </div>
+
+      <div class="man-prevention-block">
+        <h4 class="man-mini-title">근골격계질환·요통 예방을 위한 중량물 취급 관리</h4>
+        <div class="man-mini-cards man-mini-cards-2">
+          <div class="man-mini-card">
+            <h4>운반작업 주요 재해</h4>
+            <ul class="man-guide-list-compact">
+              <li>화물 사이에 손을 넣음</li>
+              <li>화물을 발 위에 떨어뜨림</li>
+              <li>화물에 신경을 쓰느라 주의가 분산되어 운반구 등에 부딪히거나 중심을 잃어 넘어짐</li>
+            </ul>
+          </div>
+          <div class="man-mini-card">
+            <h4>하역작업 주요 재해</h4>
+            <ul class="man-guide-list-compact">
+              <li>화물이 떨어지거나 무너져 내림</li>
+              <li>화물을 쌓을 때 손이나 발이 끼임</li>
+              <li>화물을 들어올릴 때 무리한 힘을 가하거나 자세 불량으로 허리를 다침</li>
+            </ul>
+          </div>
+        </div>
+        <div class="man-img-showcase man-img-showcase-full">
+          <figure class="man-img-card"><img src="assets/img/prevention-lifting.png" alt="물건을 들어올리는 방법" loading="lazy"><figcaption>물건을 들어올리는 방법</figcaption></figure>
+        </div>
+      </div>
+
+      <h3 class="man-sub-title">▣ 당사 작업 전 예방관리(안전점검) 예시</h3>
+      <div class="man-checklist-tabs">
+        <div class="man-subtab-nav">
+          <button class="man-subtab-btn active" data-tab="store">매장 안전점검 사항</button>
+          <button class="man-subtab-btn" data-tab="office">사무실 안전점검 사항</button>
+        </div>
+        <div class="man-subtab-panel active" id="tab-store">
+          <div class="man-table-wrap">
+            <table class="man-data-table man-checklist-table">
+              <thead><tr><th>구분</th><th>점검 내용</th></tr></thead>
+              <tbody>
+                <tr><td>1</td><td>비상구 및 피난통로 주변 물건을 적재하지 않도록 관리하였는가?</td></tr>
+                <tr><td>2</td><td>사다리 및 작업도구 파손 상태 유무를 확인하였는가?</td></tr>
+                <tr><td>3</td><td>전기, 멀티콘센트 외관 상태를 확인하였는가?</td></tr>
+                <tr><td>4</td><td>전열기구(여름: 냉방, 겨울: 난방) 관리 상태를 확인하였는가?</td></tr>
+                <tr><td>5</td><td>소화기 및 소방시설물 상태를 확인하였는가?</td></tr>
+                <tr><td>6</td><td>작업장 통로 확보 상태를 확인하였는가?</td></tr>
+                <tr><td>7</td><td>위험 작업(사다리) 전 개인보호구 착용을 확인하였는가? 혹은 비치/관리 상태를 확인하였는가?</td></tr>
+                <tr><td>8</td><td>진열대 주변 낙하물 방지 상태 유무를 확인하였는가?</td></tr>
+                <tr><td>9</td><td>공용시설(계단, E/S, E/V) 상태를 확인하였는가?</td></tr>
+                <tr><td>10</td><td>근로자의 건강상태 유무를 확인하였는가?</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="man-subtab-panel" id="tab-office">
+          <div class="man-table-wrap">
+            <table class="man-data-table man-checklist-table">
+              <thead><tr><th>구분</th><th>점검 내용</th></tr></thead>
+              <tbody>
+                <tr><td>1</td><td>비상구 및 피난통로 주변 물건을 적재하지 않도록 관리하였는가?</td></tr>
+                <tr><td>2</td><td>컴퓨터, OA기기 전원(사용 전·후) 상태를 확인하였는가?</td></tr>
+                <tr><td>3</td><td>전자기기, 보조배터리 상태를 확인하였는가?</td></tr>
+                <tr><td>4</td><td>전열기구(여름: 냉방, 겨울: 난방) 관리 상태를 확인하였는가?</td></tr>
+                <tr><td>5</td><td>소화기 및 소방시설물 상태를 확인하였는가?</td></tr>
+                <tr><td>6</td><td>L카 등 물건 운반 시 통로 확보 상태를 확인하였는가?</td></tr>
+                <tr><td>7</td><td>보행통로 내 전선 등 걸려 넘어질 위험요인을 확인하였는가?</td></tr>
+                <tr><td>8</td><td>불안전한 자세로 컴퓨터 사무업무를 진행하지 않도록 관리하고 있는가?</td></tr>
+                <tr><td>9</td><td>의자 및 책상의 상태는 안전한가?</td></tr>
+                <tr><td>10</td><td>계단 이용 시 넘어질 위험에 대한 인지 표지가 붙어있는가?</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 06 FAQ -->
+    <section id="faq" class="man-section">
+      <p class="man-section-eyebrow">CHAPTER 06</p>
+      <h2 class="man-section-title">자주 묻는 질문 (FAQ)</h2>
+      <p class="man-section-desc">총 28개 질문을 검색하거나 아래에서 바로 확인하세요.</p>
+
+      <div class="man-faq-search-wrap">
+        <input type="text" id="faqSearch" class="man-faq-search" placeholder="질문 내용으로 검색... (예: CCTV, 공상, 출퇴근)">
+      </div>
+
+      <div class="man-faq-list" id="faqList">
+        <!-- FAQ items injected by JS from data, but static fallback below -->
+      </div>
+    </section>
+
+    
+      <div class="man-footer">
+        <p>직원 사고 발생 시 대응 매뉴얼 · 안전보건팀 · 2026년 하반기 개정판</p>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- TAB (헤더 아이콘으로 접근): 검색 -->
+  <section class="tab-panel" id="panel-search" data-panel="search">
+
+    <div class="panel-intro">
+      <h2>궁금한 내용 검색</h2>
+      <p>키워드를 입력하면 관련 질문과 답변을 바로 찾아드립니다. (동의어 검색 지원)</p>
+    </div>
+
+    <div class="search-bar-wrap">
+      <input type="text" id="searchInput" class="search-input" placeholder="예: CCTV, 공상, 출퇴근, 면담...">
+    </div>
+
+    <div class="search-tags">
+      <button class="search-tag-btn" data-tag="즉시대응">즉시대응</button>
+      <button class="search-tag-btn" data-tag="사고조사">사고조사</button>
+      <button class="search-tag-btn" data-tag="경위서">경위서</button>
+      <button class="search-tag-btn" data-tag="휴업신청">휴업신청</button>
+      <button class="search-tag-btn" data-tag="FAQ">FAQ</button>
+    </div>
+
+    <div class="search-results" id="searchResults">
+      <div class="search-empty">검색어를 입력하거나 위 태그를 눌러보세요.</div>
+    </div>
+
+  </section>
+
+</main>
+
+<!-- 결과 문서를 실제 PDF 파일로 만들어 Teams 카드용 첨부파일을 만들기 위한 라이브러리 (오픈소스, MIT 라이선스) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="assets/js/search-data.js"></script>
+<script src="assets/js/faq-data.js"></script>
+<script src="assets/js/org-data.js"></script>
+<script src="assets/js/investigation.js"></script>
+<script src="assets/js/auth.js"></script>
+<script src="assets/js/manual.js"></script>
+<script src="assets/js/main.js"></script>
+</body>
+</html>
