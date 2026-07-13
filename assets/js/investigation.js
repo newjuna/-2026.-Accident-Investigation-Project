@@ -15,7 +15,7 @@
    4. "검토 완료"를 누르면 아래 순서로 자동 판단하고, 어떤 결과든
       제출용 문서(초안)를 생성해 PDF/Teams로 남길 수 있게 합니다.
    5. 최종 문구는 "확정"이라는 단어를 쓰지 않고
-      "인정 검토 / 불인정 검토 / 추가 확인 필요"로만 표현합니다.
+      "인정 검토 / 불인정 검토" 두 가지로만 표현합니다.
    ========================================================= */
 
 const INV_BASE_KEY = 'fieldGuide_investigation_base';
@@ -30,7 +30,7 @@ const INV_DOWNLOAD_TOKEN_KEY = 'fieldGuide_investigation_downloadToken';
  * "Teams로 전송" 버튼이 실제로 동작합니다.
  * 비워두면 미리보기만 표시되고 실제 전송은 되지 않습니다.
  */
-const INV_TEAMS_ENDPOINT_URL = 'https://script.google.com/macros/s/AKfycbyBjA0GZyRLKdrbV0NnoXf0Eye0-f8lqdnScqchQYX6WPrqO9kMY9VI3C7AIdZd1HQK/exec'; // 예: 'https://script.google.com/macros/s/AKfycb.../exec' (새로 배포한 뒤 여기에 붙여넣기)
+const INV_TEAMS_ENDPOINT_URL = ''; // 예: 'https://script.google.com/macros/s/AKfycb.../exec' (새로 배포한 뒤 여기에 붙여넣기)
 
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -771,41 +771,81 @@ document.addEventListener('DOMContentLoaded', () => {
       : Array.from(witnessList.querySelectorAll('.witness-card')).map(readCard);
     const classified = witnesses.map(w => ({ w, c: classify(w) }));
 
-    const hasDirectSpecific = classified.some(x => x.c.type === 'direct');
-    const hasDirectVague = classified.some(x => x.c.type === 'directVague');
-    const hasAftermath = classified.some(x => x.c.type === 'aftermath');
-    const hasReportBackup = base.invReportImmediate || base.invReportChat;
-    const onlySecondOrUnaware = classified.length > 0 &&
-      classified.every(x => x.c.type === 'secondhand' || x.c.type === 'unaware' || x.c.type === 'none');
+    const direct = classified.filter(x => x.c.type === 'direct' || x.c.type === 'directVague');
+    const aftermath = classified.filter(x => x.c.type === 'aftermath');
+    const secondhand = classified.filter(x => x.c.type === 'secondhand');
+    const unaware = classified.filter(x => x.c.type === 'unaware');
+    const hasReportBackup = !!(base.invReportImmediate || base.invReportChat);
 
-    let verdict; // recognized | unrecognized | review
+    // 최종 결과는 인정 검토 / 불인정 검토 두 가지로만 구분합니다.
+    // 명확한 객관근거 또는 서로 보완되는 정황근거가 있을 때만 인정 검토로 봅니다.
+    const recognized =
+      base.invCctv === 'clear' ||
+      base.invWorkVideoAbnormal === 'yes' ||
+      direct.length > 0 ||
+      (aftermath.length > 0 && hasReportBackup);
+
+    const verdict = recognized ? 'recognized' : 'unrecognized';
     const reasons = [];
 
-    if (base.invCctv === 'clear') {
-      verdict = 'recognized';
-      reasons.push('CCTV 영상에 사고 장면이 그대로 확인되었습니다.');
-    } else if (base.invWorkVideoAbnormal === 'yes') {
-      verdict = 'recognized';
-      reasons.push('사고 장면이 확인되는 CCTV 영상은 없으나, 당일 근무 영상에서 통증 호소·이상행동 등 사고 직후 정황이 확인되었습니다.');
-    } else if (hasDirectSpecific) {
-      verdict = 'recognized';
-      reasons.push('사고 장면이 확인되는 CCTV 영상은 없으나, 사고 장면을 직접 목격하고 구체적으로 진술한 목격자가 확인되었습니다.');
-    } else if (hasAftermath && hasReportBackup) {
-      verdict = 'recognized';
-      reasons.push('사고 장면을 직접 목격한 진술은 없으나, 사고 직후 정황을 확인한 간접 진술과 사고 직후 보고기록이 함께 확인되어 인정 방향으로 검토합니다.');
-    } else if (onlySecondOrUnaware && !hasReportBackup) {
-      verdict = 'unrecognized';
-      reasons.push('CCTV에 사고 장면이 확인되지 않았고, 당일 근무 영상에서도 이상행동이 확인되지 않았습니다.');
-      reasons.push('목격자 면담 결과 사고 장면을 직접 목격하거나 사고 직후 정황을 확인한 진술은 없으며, 전해 들었다는 수준의 진술만 확인되었습니다.');
-      reasons.push('카톡·팀즈 등 사고 직후 보고기록도 확인되지 않아, 현재 확보된 자료만으로는 재해 발생 사실을 객관적으로 확인하기 어렵습니다.');
-    } else {
-      verdict = 'review';
-      if (hasDirectVague) {
-        reasons.push('사고 장면을 직접 목격했다는 진술은 있으나, 사고 시간·장소·경위가 구체적으로 확인되지 않았습니다.');
-      } else {
-        reasons.push('일부 진술이 있으나 직접 목격·정황 확인 등 사실관계를 뒷받침할 근거가 충분하지 않습니다.');
+    if (recognized) {
+      if (base.invCctv === 'clear') {
+        reasons.push('CCTV 영상 확인 결과, 재해자가 주장한 사고 장면이 명확히 확인되었습니다.');
+      } else if (base.invCctv === 'unclear') {
+        reasons.push('CCTV 영상은 있으나 사고 장면 자체는 명확히 확인되지 않았습니다.');
+      } else if (base.invCctv === 'none') {
+        reasons.push('사고 장면을 확인할 수 있는 CCTV 영상은 확보되지 않았습니다.');
       }
-      reasons.push('현재 자료만으로는 인정·불인정을 판단하기 어려워 추가 확인이 필요합니다.');
+
+      if (base.invWorkVideoAbnormal === 'yes') {
+        reasons.push('당일 근무 영상에서 사고 직후 통증 호소 또는 평소와 다른 상태가 확인되었습니다.');
+      }
+
+      if (direct.length > 0) {
+        const names = direct.map(x => (x.w.name || '').trim()).filter(Boolean).join(', ');
+        reasons.push(`목격자 면담 결과, 사고 장면을 직접 목격한 진술${names ? `(${names})` : ''}이 확인되었습니다.`);
+      }
+
+      if (aftermath.length > 0 && hasReportBackup) {
+        reasons.push('사고 직후 통증 호소 등 정황을 확인한 진술과 사고 보고·공유 기록이 함께 확인되어 서로 보완되는 근거로 판단됩니다.');
+      }
+
+      reasons.push('확보된 영상·목격자 진술·보고기록을 종합할 때 업무 중 사고 발생 사실을 인정하는 방향으로 검토합니다.');
+    } else {
+      if (base.invCctv === 'unclear') {
+        reasons.push('CCTV 영상은 있으나 재해자가 주장한 사고 장면은 확인되지 않았습니다.');
+      } else if (base.invCctv === 'none') {
+        reasons.push('사고 장면을 확인할 수 있는 CCTV 영상은 확보되지 않았습니다.');
+      }
+
+      if (base.invWorkVideoAbnormal === 'no') {
+        reasons.push('당일 근무 영상에서도 사고 직후 통증 호소 장면은 확인되지 않았습니다.');
+      }
+
+      if (classified.length === 0) {
+        reasons.push('사고 장면 또는 사고 직후 정황을 확인한 목격자는 없는 것으로 확인되었습니다.');
+      } else {
+        if (direct.length === 0) {
+          reasons.push('목격자 면담 결과 사고 장면을 직접 목격한 진술은 확인되지 않았습니다.');
+        }
+        if (secondhand.length > 0) {
+          reasons.push('확인된 일부 진술은 재해자 또는 다른 직원으로부터 사후에 전달받은 내용으로, 사고 발생 사실을 직접 입증하는 근거로 보기 어렵습니다.');
+        }
+        if (unaware.length > 0) {
+          reasons.push('일부 당일 근무자는 사고 장면이나 사고 직후 통증 호소 등의 정황을 인지하지 못한 것으로 확인되었습니다.');
+        }
+        if (aftermath.length > 0 && !hasReportBackup) {
+          reasons.push('사고 직후 정황을 보았다는 진술은 있으나 이를 뒷받침할 사고 직후 보고·공유 기록이나 객관 영상이 확인되지 않아 단독으로 사고 발생을 인정하기에는 근거가 부족합니다.');
+        }
+      }
+
+      if (!hasReportBackup) {
+        reasons.push('카톡·팀즈·전화 등 사고 직후 보고 또는 공유 기록도 확인되지 않았습니다.');
+      } else {
+        reasons.push('사고 보고 또는 공유 기록은 있으나, 해당 기록만으로는 실제 사고 장면이나 발생 경위를 직접 확인하기 어렵습니다.');
+      }
+
+      reasons.push('따라서 현재 확보된 객관자료만으로는 재해자가 주장하는 업무 중 사고 발생 사실을 확인하기 어려워 불인정 방향으로 검토합니다.');
     }
 
     return { verdict, reasons, base, witnesses, classified };
@@ -813,9 +853,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const VERDICT_META = {
     recognized: { label: '인정 검토', icon: '✅', className: 'judge-verdict-ok' },
-    unrecognized: { label: '불인정 검토', icon: '🚫', className: 'judge-verdict-no' },
-    review: { label: '추가 확인 필요', icon: '⚠️', className: 'judge-verdict-review' }
+    unrecognized: { label: '불인정 검토', icon: '🚫', className: 'judge-verdict-no' }
   };
+
 
   /* =========================================================
      4. 결과 문서 자동 생성 — 정식 확인서 형태로 바로 렌더링
@@ -830,34 +870,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const DOC_VERDICT_META = {
     recognized: { label: '인정 검토', icon: '✅', boxClass: 'doc-verdict-ok' },
-    unrecognized: { label: '불인정 검토', icon: '🚫', boxClass: 'doc-verdict-no' },
-    review: { label: '추가 확인 필요', icon: '⚠️', boxClass: 'doc-verdict-review' }
+    unrecognized: { label: '불인정 검토', icon: '🚫', boxClass: 'doc-verdict-no' }
   };
 
-  // 불인정/추가확인 문단 (편집 가능 영역의 초기 문구)
+  // 불인정일 때 판단사유를 바탕으로 보험가입자의견서 별지 초안을 자동 생성합니다.
   function buildAppendixHtml(result) {
-    const b = result.base;
-    const storeName = b.invStoreName || '○○점';
-    const victimName = b.invVictimName || '재해자';
-    const dateStr = b.invIncidentDate || '○○○○-○○-○○';
-    const timeStr = b.invIncidentTime || '○○:○○';
-    const placeStr = b.invIncidentPlace || '○○ 장소';
+    if (result.verdict !== 'unrecognized') return '';
 
-    if (result.verdict === 'unrecognized') {
-      return `
-        <p>${escapeHtml(victimName)}은 ${escapeHtml(dateStr)} ${escapeHtml(timeStr)}경 ${escapeHtml(storeName)} 내 ${escapeHtml(placeStr)}에서 업무 중 부상을 입었다고 주장하고 있으나, 사업장에서 확인 가능한 객관자료를 검토한 결과 재해 발생 사실을 확인하기 어려운 것으로 판단됩니다.</p>
-        <p>먼저, 사고 장면이 확인되는 CCTV 영상은 확인되지 않았으며, 당일 근무 영상 확인 결과 통증 호소·이상행동 등 사고 직후 정황도 확인되지 않았습니다.</p>
-        <p>또한 당일 근무자 면담 결과, 사고 장면을 직접 목격하였거나 사고 직후 정황을 확인한 진술은 확인되지 않았습니다. 일부 진술은 전해 들었다는 수준에 해당하여 사고 발생 사실을 직접 확인한 자료로 보기 어렵습니다.</p>
-        <p>아울러 카톡·팀즈 등 사고 직후 보고기록도 확인되지 않아 현재 확보된 자료만으로는 재해 발생 사실을 객관적으로 확인하기 어렵습니다.</p>
-        <p>따라서 사업장에서는 현재 확인 가능한 자료를 기준으로 본 건 재해사실을 인정하기 어렵다는 의견을 제출합니다. 다만 최종 업무상 재해 인정 여부는 근로복지공단의 조사 및 판단에 따릅니다.</p>
-      `;
-    }
-    if (result.verdict === 'review') {
-      return `
-        <p>현재 확보된 자료만으로는 인정·불인정을 판단하기 어렵습니다. 추가 자료(직접 목격 진술의 구체화, CCTV·보고기록 등)를 확보한 뒤 안전보건팀과 함께 재검토가 필요합니다.</p>
-      `;
-    }
-    return '';
+    const reasonParagraphs = result.reasons
+      .filter(reason => !reason.startsWith('따라서 현재 확보된 객관자료만으로는'))
+      .map(reason => `<p>${escapeHtml(reason)}</p>`)
+      .join('');
+
+    return `
+      <p>재해자는 업무 수행 중 부상을 입었다고 주장하고 있으나, 사업장에서 확인 가능한 CCTV·당일 근무 영상·목격자 면담·사고 보고 및 공유 기록을 검토한 결과는 다음과 같습니다.</p>
+      ${reasonParagraphs}
+      <p>위 확인사항을 종합하면 현재 확보된 객관자료만으로는 재해자가 주장하는 업무 중 사고 발생 사실을 확인하기 어렵습니다. 이에 사업장에서는 본 건의 재해사실을 인정하기 어렵다는 의견을 제출합니다.</p>
+      <p>다만 업무상 재해 인정 여부에 대한 최종 판단은 근로복지공단의 조사 및 결정에 따릅니다.</p>
+    `;
   }
 
   /**
@@ -896,7 +926,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const appendixHtml = buildAppendixHtml(result);
     const appendixTitle = result.verdict === 'unrecognized'
       ? '■ 보험가입자의견서 별지 — 재해사실 불인정 사유'
-      : (result.verdict === 'review' ? '■ 후속 조치' : '');
+      : '';
 
     const attachGrid = chatImages.length
       ? `<div class="doc-section"><p class="doc-section-title">■ 첨부 : 공유·보고 기록 캡처</p><div class="doc-attach-grid">${chatImages.map((img, i) => `<img src="${img.dataUrl}" alt="증빙 캡처 ${i + 1}">`).join('')}</div></div>`
