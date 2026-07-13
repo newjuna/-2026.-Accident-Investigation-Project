@@ -29,7 +29,7 @@ const INV_CASE_ID_KEY = 'fieldGuide_investigation_caseId';
  * "Teams로 전송" 버튼이 실제로 동작합니다.
  * 비워두면 미리보기만 표시되고 실제 전송은 되지 않습니다.
  */
-const INV_TEAMS_ENDPOINT_URL = 'https://script.google.com/macros/s/AKfycbwnzX0w6H6gney2mf2w5AbT2tKykEncpJFmAkLfb4LNNa-omgus11xwHIKu53qIngP7/exec'; // 예: 'https://script.google.com/macros/s/AKfycb.../exec' (새로 배포한 뒤 여기에 붙여넣기)
+const INV_TEAMS_ENDPOINT_URL = 'https://script.google.com/macros/s/AKfycbz9I1CMFq0-i1aE5fnvFBmlXQBAiQqw30YfeamRsEjxQMiHLd-LNorLPX1kt0Ri4rrB/exec'; // 예: 'https://script.google.com/macros/s/AKfycb.../exec' (새로 배포한 뒤 여기에 붙여넣기)
 
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -279,6 +279,61 @@ document.addEventListener('DOMContentLoaded', () => {
   const chatFileInput = document.getElementById('invChatFileInput');
   const chatAttachBtn = document.getElementById('invChatAttachBtn');
   const chatPreview = document.getElementById('invChatPreview');
+  const IMAGE_MAX_SIDE = 1200;
+  const IMAGE_JPEG_QUALITY = 0.68;
+
+  function bytesToSize(bytes) {
+    if (!bytes) return '0KB';
+    if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024)}KB`;
+    return `${(bytes / 1024 / 1024).toFixed(1)}MB`;
+  }
+
+  function dataUrlByteSize(dataUrl) {
+    const base64 = String(dataUrl || '').split(',').pop() || '';
+    return Math.round(base64.length * 0.75);
+  }
+
+  function loadImageFromDataUrl(dataUrl) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = reject;
+      img.src = dataUrl;
+    });
+  }
+
+  function readFileAsDataUrl(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = ev => resolve(ev.target.result);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function compressImageFile(file) {
+    const originalDataUrl = await readFileAsDataUrl(file);
+    const img = await loadImageFromDataUrl(originalDataUrl);
+    const scale = Math.min(1, IMAGE_MAX_SIDE / Math.max(img.width, img.height));
+    const width = Math.max(1, Math.round(img.width * scale));
+    const height = Math.max(1, Math.round(img.height * scale));
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, width, height);
+    ctx.drawImage(img, 0, 0, width, height);
+    const dataUrl = canvas.toDataURL('image/jpeg', IMAGE_JPEG_QUALITY);
+    return {
+      name: (file.name || 'capture.jpg').replace(/\.[^.]+$/, '') + '.jpg',
+      dataUrl,
+      originalBytes: file.size || dataUrlByteSize(originalDataUrl),
+      compressedBytes: dataUrlByteSize(dataUrl),
+      width,
+      height
+    };
+  }
 
   function renderChatPreview() {
     if (!chatPreview) return;
@@ -289,6 +344,7 @@ document.addEventListener('DOMContentLoaded', () => {
     chatPreview.innerHTML = chatImages.map((img, i) => `
       <div class="attach-thumb">
         <img src="${img.dataUrl}" alt="증빙 캡처 ${i + 1}">
+        <span class="attach-size">${bytesToSize(img.compressedBytes || dataUrlByteSize(img.dataUrl))}</span>
         <button type="button" class="attach-thumb-remove" data-index="${i}" aria-label="삭제">✕</button>
       </div>
     `).join('');
@@ -297,20 +353,21 @@ document.addEventListener('DOMContentLoaded', () => {
   if (chatAttachBtn && chatFileInput) {
     chatAttachBtn.addEventListener('click', () => chatFileInput.click());
 
-    chatFileInput.addEventListener('change', () => {
+    chatFileInput.addEventListener('change', async () => {
       const files = Array.from(chatFileInput.files || []);
-      let remaining = files.length;
-      if (remaining === 0) return;
-      files.forEach(file => {
-        if (!file.type.startsWith('image/')) { remaining -= 1; return; }
-        const reader = new FileReader();
-        reader.onload = (ev) => {
-          chatImages.push({ name: file.name, dataUrl: ev.target.result });
-          renderChatPreview();
-        };
-        reader.readAsDataURL(file);
-      });
-      chatFileInput.value = ''; // 같은 파일 다시 선택 가능하도록 초기화
+      if (files.length === 0) return;
+      if (chatPreview) chatPreview.innerHTML = '<p class="attach-empty">캡처 이미지를 전송용으로 압축하는 중입니다...</p>';
+      for (const file of files) {
+        if (!file.type.startsWith('image/')) continue;
+        try {
+          chatImages.push(await compressImageFile(file));
+        } catch (err) {
+          console.warn('이미지 압축 실패:', err);
+          alert(`이미지 압축에 실패했습니다: ${file.name || '선택한 파일'}`);
+        }
+      }
+      renderChatPreview();
+      chatFileInput.value = '';
     });
 
     chatPreview.addEventListener('click', (e) => {
@@ -832,9 +889,8 @@ document.addEventListener('DOMContentLoaded', () => {
   function setSharePdfAvailability() {
     const btn = document.getElementById('sharePdfBtn');
     if (!btn) return;
-    const ready = !!getLastPdfBlob();
-    btn.disabled = !ready;
-    btn.title = ready ? '' : 'PDF 생성이 완료된 뒤 공유할 수 있습니다.';
+    btn.disabled = false;
+    btn.title = '서버에서 생성된 PDF 링크는 전송된 카드의 결과문서 보기 버튼에서 확인할 수 있습니다.';
   }
 
   function drawWrappedText(ctx, text, x, y, maxWidth, lineHeight) {
@@ -1067,6 +1123,17 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  function buildAttachmentMeta() {
+    return chatImages.map((img, i) => ({
+      index: i + 1,
+      fileName: img.name || `capture_${i + 1}.jpg`,
+      bytes: img.compressedBytes || dataUrlByteSize(img.dataUrl),
+      originalBytes: img.originalBytes || 0,
+      width: img.width || 0,
+      height: img.height || 0
+    }));
+  }
+
   /**
    * 이미지 캡처 없이 즉시 만들 수 있는 payload 기본형 (모달 열 때 미리보기용).
    * attachments는 카톡·팀즈 캡처만 포함하고, 결과문서 이미지는 아직 없습니다.
@@ -1105,7 +1172,8 @@ document.addEventListener('DOMContentLoaded', () => {
       unawareCount: countByType.unaware,
       document: docPreviewToPlainText(),
       note: '본 자료는 내부 확인용이며 최종 산재 판단은 근로복지공단이 결정합니다.',
-      attachments: buildAttachmentPayload(b)
+      attachments: buildAttachmentPayload(b),
+      attachmentMeta: buildAttachmentMeta()
     };
   }
 
@@ -1121,6 +1189,12 @@ document.addEventListener('DOMContentLoaded', () => {
     return Promise.resolve(payload);
   }
 
+  function clonePayloadWithoutAttachments(payload) {
+    const copy = Object.assign({}, payload);
+    copy.attachments = [];
+    return copy;
+  }
+
   // payload 미리보기용 요약 텍스트를 만듭니다. (이미지 base64는 절대 넣지 않음 —
   // 거대한 문자열을 화면에 그리면 그 자체로 브라우저가 멈춘 것처럼 느려집니다)
   function buildPreviewSummary(payload) {
@@ -1134,7 +1208,7 @@ document.addEventListener('DOMContentLoaded', () => {
       `면담자명 : ${payload.interviewerNames || '-'}`,
       `검토결과 : ${payload.verdict}`,
       `첨부파일 : ${attachCount}건`,
-      '결과문서 PDF : 서버에서 생성 후 Teams 카드에 링크로 첨부',
+      '결과문서 PDF : 서버에서 생성 후 전송 카드에 링크로 첨부',
       '',
       '판단 사유',
       ...(payload.reasons || []).map(r => '- ' + r)
@@ -1175,7 +1249,7 @@ document.addEventListener('DOMContentLoaded', () => {
       setTeamsModalState('pre');
       if (noteEl) {
         noteEl.textContent = INV_TEAMS_ENDPOINT_URL
-          ? '"전송하기"를 누르면 서버에서 결과문서 PDF를 만들어 Teams 채널·개인 쪽지에 링크로 게시하고 기록을 저장합니다.'
+          ? '"전송하기"를 누르면 서버에서 결과문서 PDF를 만들어 링크로 게시하고 기록을 저장합니다.'
           : '전송 연동 주소가 아직 설정되지 않아 미리보기만 가능합니다. (assets/js/investigation.js 상단의 INV_TEAMS_ENDPOINT_URL 값을 설정하세요)';
       }
       if (modal) modal.classList.add('visible');
@@ -1189,6 +1263,50 @@ document.addEventListener('DOMContentLoaded', () => {
     const timer = setTimeout(() => controller.abort(), ms);
     return fetch(url, Object.assign({}, options, { signal: controller.signal }))
       .finally(() => clearTimeout(timer));
+  }
+
+  function postToEndpoint(payload, timeoutMs) {
+    return fetchWithTimeout(INV_TEAMS_ENDPOINT_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload)
+    }, timeoutMs || 60000);
+  }
+
+  async function runReliableSubmission(payload, statusEl, buttonEl) {
+    const attachments = payload.attachments || [];
+    const basePayload = clonePayloadWithoutAttachments(payload);
+    const totalBytes = attachments.reduce((sum, att) => sum + dataUrlByteSize(att.dataUrl), 0);
+
+    if (statusEl) {
+      statusEl.textContent = `1/3 접수 정보를 전송 중입니다. 첨부 ${attachments.length}건 / ${bytesToSize(totalBytes)}`;
+    }
+    if (buttonEl) buttonEl.textContent = '⏳ 1/3 접수 중...';
+    await postToEndpoint(Object.assign({}, basePayload, { action: 'startSubmission' }), 45000);
+
+    for (let i = 0; i < attachments.length; i += 1) {
+      const att = attachments[i];
+      if (statusEl) {
+        statusEl.textContent = `2/3 캡처 업로드 중입니다. (${i + 1}/${attachments.length}, ${bytesToSize(dataUrlByteSize(att.dataUrl))})`;
+      }
+      if (buttonEl) buttonEl.textContent = `⏳ 2/3 첨부 ${i + 1}/${attachments.length}`;
+      await postToEndpoint({
+        action: 'uploadAttachment',
+        caseId: payload.caseId,
+        division: payload.division,
+        department: payload.department,
+        team: payload.team,
+        storeName: payload.storeName,
+        attachment: att
+      }, 45000);
+    }
+
+    if (statusEl) {
+      statusEl.textContent = '3/3 서버에서 PDF를 만들고 전송 중입니다... (최대 60초)';
+    }
+    if (buttonEl) buttonEl.textContent = '⏳ 3/3 최종 전송 중...';
+    await postToEndpoint(Object.assign({}, basePayload, { action: 'finalizeSubmission' }), 60000);
   }
 
   const sendTeamsNowBtn = document.getElementById('sendTeamsNowBtn');
@@ -1218,29 +1336,16 @@ document.addEventListener('DOMContentLoaded', () => {
       waitForUiPaint()
         .then(() => buildTeamsPayload())
         .then(payload => {
-          sendTeamsNowBtn.textContent = '⏳ 전송 중... (최대 60초)';
+          sendTeamsNowBtn.textContent = '⏳ 단계별 전송 중...';
           if (statusEl) {
-            statusEl.textContent = '사고조사 내용을 전송 중입니다. 서버에서 결과문서 PDF를 만들어 Teams 링크로 첨부합니다... (최대 60초)';
+            statusEl.textContent = '모바일 안정 전송을 시작합니다...';
           }
-          return fetchWithTimeout(INV_TEAMS_ENDPOINT_URL, {
-            method: 'POST',
-            mode: 'no-cors',
-            headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // Apps Script와의 호환을 위해 text/plain 사용
-            body: JSON.stringify(payload)
-          }, 60000);
+          return runReliableSubmission(payload, statusEl, sendTeamsNowBtn);
         })
-        .then(res => {
-          if (res && res.type === 'opaque') {
-            return { ok: true, opaque: true };
-          }
-          return res.json();
-        })
-        .then(data => {
+        .then(() => {
           if (statusEl) {
-            statusEl.textContent = data.opaque
-              ? '✅ 전송 요청을 완료했습니다. Teams 도착 여부를 확인해주세요.'
-              : (data.ok ? '✅ 전송 완료되었습니다.' : '⚠ 전송은 되었으나 일부 처리에 문제가 있었습니다.');
-            statusEl.className = 'teams-send-status ' + (data.ok ? 'teams-send-ok' : 'teams-send-error');
+            statusEl.textContent = '✅ 전송 요청을 완료했습니다. 전송 카드 도착 여부를 확인해주세요.';
+            statusEl.className = 'teams-send-status teams-send-ok';
           }
           // 서버에서 PDF를 만들기 때문에 휴대폰 공유 버튼은 로컬 PDF가 있을 때만 활성화됩니다.
           setTeamsModalState('done');
@@ -1276,43 +1381,16 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   /* =========================================================
-     PDF 공유하기 — 휴대폰 표준 공유시트를 띄워 Teams·카카오톡 등
-     원하는 앱으로 방금 만든 PDF 파일을 직접 보낼 수 있게 합니다.
-     (Web Share API — 파일 공유는 모바일 브라우저에서만 지원됩니다)
+     PDF 링크 확인 안내
+     ---------------------------------------------------------
+     모바일 안정 전송 구조에서는 PDF가 휴대폰이 아니라 Apps Script 서버에서
+     생성되어 Drive에 저장됩니다. 링크는 전송된 카드의 "결과문서 보기" 버튼에
+     붙으므로, 이 버튼은 사용자를 그 위치로 안내합니다.
      ========================================================= */
   const sharePdfBtn = document.getElementById('sharePdfBtn');
   if (sharePdfBtn) {
     sharePdfBtn.addEventListener('click', () => {
-      const blob = getLastPdfBlob();
-      if (!blob) {
-        alert('공유할 PDF가 없습니다. "전송하기"를 먼저 눌러 PDF를 생성해주세요.');
-        return;
-      }
-      const result = window.__investigationResult || computeJudgement();
-      const b = result.base;
-      const dateStr = (b.invIncidentDate || '').replace(/-/g, '') || 'unknown';
-      const storeStr = (b.invStoreName || '매장').replace(/[\\/:*?"<>|]/g, '');
-      const fileName = `${dateStr}_${storeStr}_사고조사결과.pdf`;
-      const file = new File([blob], fileName, { type: 'application/pdf' });
-
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        navigator.share({
-          files: [file],
-          title: '사고조사 결과 문서',
-          text: '사고조사 결과 문서를 확인해주세요.'
-        }).catch(() => { /* 사용자가 공유를 취소한 경우 등 - 별도 처리 불필요 */ });
-      } else {
-        // 공유 API를 지원하지 않는 환경(주로 PC 브라우저)에서는 파일 다운로드로 대체
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = fileName;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        setTimeout(() => URL.revokeObjectURL(url), 3000);
-        alert('이 기기·브라우저에서는 공유 기능을 지원하지 않아 PDF를 다운로드했습니다. 다운로드된 파일을 Teams 앱에서 직접 첨부해주세요.');
-      }
+      alert('PDF는 서버에서 생성되어 전송된 카드의 "결과문서 보기" 버튼으로 확인할 수 있습니다.');
     });
   }
 
