@@ -30,7 +30,7 @@ const INV_DOWNLOAD_TOKEN_KEY = 'fieldGuide_investigation_downloadToken';
  * "Teams로 전송" 버튼이 실제로 동작합니다.
  * 비워두면 미리보기만 표시되고 실제 전송은 되지 않습니다.
  */
-const INV_TEAMS_ENDPOINT_URL = 'https://script.google.com/macros/s/AKfycbw13fTYnJTQoAk-Fmo1-x3kGmz7zErKd8KBTJ0Y5JSMAgkbfLLNNE9q2KpsMtmyRNIS/exec'; // 예: 'https://script.google.com/macros/s/AKfycb.../exec' (새로 배포한 뒤 여기에 붙여넣기)
+const INV_TEAMS_ENDPOINT_URL = ''; // 예: 'https://script.google.com/macros/s/AKfycb.../exec' (새로 배포한 뒤 여기에 붙여넣기)
 
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -1029,6 +1029,15 @@ document.addEventListener('DOMContentLoaded', () => {
     return preview ? preview.innerText.trim() : '';
   }
 
+  function docPreviewToServerHtml() {
+    const preview = document.getElementById('invDocPreview');
+    if (!preview) return '';
+    const clone = preview.cloneNode(true);
+    // 첨부 이미지는 이미 별도 업로드되므로 대용량 base64를 다시 전송하지 않습니다.
+    clone.querySelectorAll('.doc-attach-grid img').forEach(img => img.removeAttribute('src'));
+    return clone.innerHTML.trim();
+  }
+
   function renderResult(result) {
     const meta = VERDICT_META[result.verdict];
     const classifyRows = result.classified.map((x, i) =>
@@ -1465,6 +1474,7 @@ document.addEventListener('DOMContentLoaded', () => {
       secondhandCount: countByType.secondhand,
       unawareCount: countByType.unaware,
       document: docPreviewToPlainText(),
+      documentHtml: docPreviewToServerHtml(),
       note: '본 자료는 내부 확인용이며 최종 산재 판단은 근로복지공단이 결정합니다.',
       attachments: buildAttachmentPayload(b),
       attachmentMeta: buildAttachmentMeta()
@@ -1806,8 +1816,7 @@ document.addEventListener('DOMContentLoaded', () => {
   if (submitHomeBtn) {
     submitHomeBtn.addEventListener('click', () => {
       hideSubmitOverlay();
-      const homeTarget = document.querySelector('.nav-menu-item[data-target="manual"]') ? 'manual' : 'investigation';
-      const homeBtn = document.querySelector(`.nav-menu-item[data-target="${homeTarget}"]`);
+      const homeBtn = document.querySelector('.nav-menu-item[data-target="home"]');
       if (homeBtn) homeBtn.click();
     });
   }
@@ -1818,8 +1827,7 @@ document.addEventListener('DOMContentLoaded', () => {
     teamsHomeBtn.addEventListener('click', () => {
       const modal = document.getElementById('teamsModal');
       if (modal) modal.classList.remove('visible');
-      const homeTarget = document.querySelector('.nav-menu-item[data-target="manual"]') ? 'manual' : 'investigation';
-      const homeBtn = document.querySelector(`.nav-menu-item[data-target="${homeTarget}"]`);
+      const homeBtn = document.querySelector('.nav-menu-item[data-target="home"]');
       if (homeBtn) homeBtn.click();
     });
   }
