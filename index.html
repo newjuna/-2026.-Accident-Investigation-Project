@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>사고 발생 현장 대응 가이드 | 안전보건팀</title>
-<link rel="stylesheet" href="assets/css/style.css?v=gpt-v1-10">
+<link rel="stylesheet" href="assets/css/style.css?v=gpt-v1-11">
 <!-- 결과 문서 서명란에 사용하는 손글씨 느낌 폰트 (Google Fonts) -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Nanum+Pen+Script&display=swap" rel="stylesheet">
@@ -153,105 +153,141 @@
     </div>
     <p class="witness-guide-note">이 번호로 같은 사고건의 추가 정보를 이어서 작성·전송할 수 있습니다. 완전히 다른 사고면 "새 사고 작성"을 눌러 새 번호를 받으세요.</p>
 
-    <!-- ① 조직 정보 + 사고 기본정보 -->
-    <fieldset class="check-fieldset">
-      <legend>① 조직 정보</legend>
-      <div class="form-row">
-        <label>부문
-          <select id="invDivision"><option value="">선택</option></select>
-        </label>
-        <label>부서
-          <select id="invDept"><option value="">부문을 먼저 선택</option></select>
-        </label>
-      </div>
-      <div class="form-row">
-        <label>팀
-          <select id="invTeam"><option value="">부서를 먼저 선택</option></select>
-        </label>
-        <label>매장명
-          <input type="text" id="invStoreName" placeholder="예: 매봉역점">
-        </label>
-      </div>
-    </fieldset>
-
-    <fieldset class="check-fieldset">
-      <legend>② 사고 기본정보</legend>
-      <div class="form-row">
-        <label>작성자 (이 폼을 작성하는 사람)
-          <input type="text" id="invAuthorName" placeholder="예: 홍길동 파트장">
-        </label>
-        <label>재해자 성명
-          <input type="text" id="invVictimName">
-        </label>
-      </div>
-      <div class="form-row">
-        <label>사고 장소
-          <input type="text" id="invIncidentPlace">
-        </label>
-        <label>사고 발생일
-          <input type="date" id="invIncidentDate">
-        </label>
-      </div>
-      <div class="form-row">
-        <label>사고 발생시간
-          <input type="time" id="invIncidentTime">
-        </label>
-      </div>
-    </fieldset>
-
-    <!-- ③ 확인자료 체크 : CCTV -->
-    <fieldset class="check-fieldset">
-      <legend>③ CCTV</legend>
-
-      <p class="field-label">CCTV에 사고 장면이 어떻게 찍혀 있나요?</p>
-      <div class="radio-pill-row">
-        <label class="radio-pill"><input type="radio" name="invCctv" value="clear"> 사고 장면이 그대로 보임</label>
-        <label class="radio-pill"><input type="radio" name="invCctv" value="unclear"> 영상은 있으나 사고 장면이 잘 안 보임</label>
-        <label class="radio-pill"><input type="radio" name="invCctv" value="none"> CCTV 영상 없음</label>
+    <div class="inv-flow">
+      <div class="inv-flow-progress" aria-label="사고조사 진행 단계">
+        <span class="active" data-inv-progress="info">정보</span>
+        <span data-inv-progress="evidence">CCTV</span>
+        <span data-inv-progress="record">공유기록</span>
+        <span data-inv-progress="witness">면담</span>
       </div>
 
-      <!-- 사고 장면이 잘 안 보이거나 영상이 없을 때만 아래 질문이 나타납니다 -->
-      <div id="invWorkVideoWrap" class="conditional-block" style="display:none">
-        <p class="field-label">당일 근무 영상에서 통증 호소·이상행동이 보이나요?</p>
-        <div class="radio-pill-row">
-          <label class="radio-pill"><input type="radio" name="invWorkVideoAbnormal" value="yes"> 이상행동이 보임</label>
-          <label class="radio-pill"><input type="radio" name="invWorkVideoAbnormal" value="no"> 이상행동이 안 보임</label>
+      <section class="inv-flow-step active" data-inv-step="info">
+        <div class="inv-question-head">
+          <p class="inv-step-label">1/4 정보</p>
+          <h3>먼저 사고 접수 정보를 입력해주세요.</h3>
+          <p>사고조사 결과문서와 전송 카드에 들어갈 기본 정보입니다.</p>
         </div>
-      </div>
-    </fieldset>
 
-    <!-- ④ 확인자료 체크 : 공유 기록 -->
-    <fieldset class="check-fieldset">
-      <legend>④ 공유 기록 유무 (카톡·팀즈 등)</legend>
+        <fieldset class="check-fieldset inv-card-fieldset">
+          <legend>정보</legend>
+          <div class="form-row">
+            <label>부문
+              <select id="invDivision"><option value="">선택</option></select>
+            </label>
+            <label>부서
+              <select id="invDept"><option value="">부문을 먼저 선택</option></select>
+            </label>
+          </div>
+          <div class="form-row">
+            <label>팀
+              <select id="invTeam"><option value="">부서를 먼저 선택</option></select>
+            </label>
+            <label>매장명
+              <input type="text" id="invStoreName" placeholder="예: 매봉역점">
+            </label>
+          </div>
+          <div class="form-row">
+            <label>작성자
+              <input type="text" id="invAuthorName" placeholder="예: 홍길동 파트장">
+            </label>
+            <label>사고 발생일
+              <input type="date" id="invIncidentDate">
+            </label>
+          </div>
+        </fieldset>
 
-      <label class="check-item"><input type="checkbox" id="invReportImmediate"><span>재해자가 점장/부점장에게 즉시 보고한 기록 있음</span></label>
-      <div id="invReportImmediateWrap" class="conditional-block" style="display:none">
-        <label class="form-full">어떻게 보고했는지 작성
-          <textarea id="invReportImmediateDetail" rows="2" placeholder="예: 사고 직후 재해자가 부점장에게 전화로 알림 → 부점장이 파트장에게 팀즈로 전달"></textarea>
-        </label>
-      </div>
+        <div class="inv-hidden-fields" aria-hidden="true">
+          <input type="text" id="invVictimName" tabindex="-1">
+          <input type="text" id="invIncidentPlace" tabindex="-1">
+          <input type="time" id="invIncidentTime" tabindex="-1">
+        </div>
 
-      <label class="check-item"><input type="checkbox" id="invReportChat"><span>카톡/팀즈/전화/라인방 등 기록 있음</span></label>
-      <div id="invReportChatWrap" class="conditional-block" style="display:none">
-        <p class="field-label">증빙 캡처 첨부 (사진 촬영 / 앨범 / 파일)</p>
-        <input type="file" id="invChatFileInput" accept="image/*" multiple hidden>
-        <button type="button" class="secondary-btn" id="invChatAttachBtn" style="margin-bottom:10px;">📎 증빙 첨부</button>
-        <div id="invChatPreview" class="attach-preview"></div>
-      </div>
-    </fieldset>
+        <div class="inv-step-actions">
+          <p class="inv-step-hint" id="invInfoHint">필수 정보를 입력하면 다음 단계로 이동할 수 있습니다.</p>
+          <button class="primary-btn" type="button" data-inv-next="evidence" id="invInfoNextBtn">다음 · CCTV 확인 →</button>
+        </div>
+      </section>
 
-    <!-- ⑤ 목격자 면담 (작성자가 면담하며 직접 작성) -->
-    <div class="panel-intro" style="margin-top:20px;">
-      <h3 class="section-sub-title">⑤ 목격자 면담</h3>
-      <p class="witness-guide-note">목격자 본인에게 작성시키지 않습니다. <strong>작성자가 직접 면담하며 들은 내용을 입력</strong>합니다. 한 명 작성 후 <strong>"이 면담 저장"</strong>을 누르면 접히고, <strong>"＋ 면담 추가"</strong>로 다음 목격자를 이어서 작성합니다.</p>
+      <section class="inv-flow-step" data-inv-step="evidence">
+        <div class="inv-question-head">
+          <p class="inv-step-label">2/4 CCTV</p>
+          <h3>CCTV에 사고 장면이 어떻게 찍혀 있나요?</h3>
+          <p>사고 장면이 명확하지 않으면 당일 근무 영상 확인 질문이 이어집니다.</p>
+        </div>
+
+        <fieldset class="check-fieldset inv-card-fieldset">
+          <legend>CCTV 확인</legend>
+          <div class="radio-pill-row inv-choice-stack">
+            <label class="radio-pill"><input type="radio" name="invCctv" value="clear"> 사고 장면이 그대로 보임</label>
+            <label class="radio-pill"><input type="radio" name="invCctv" value="unclear"> 영상은 있으나 사고 장면이 잘 안 보임</label>
+            <label class="radio-pill"><input type="radio" name="invCctv" value="none"> CCTV 영상 없음</label>
+          </div>
+
+          <div id="invWorkVideoWrap" class="conditional-block inv-follow-question" style="display:none">
+            <p class="field-label">당일 근무 영상에서 통증 호소·이상행동이 보이나요?</p>
+            <div class="radio-pill-row inv-choice-stack">
+              <label class="radio-pill"><input type="radio" name="invWorkVideoAbnormal" value="yes"> 이상행동이 보임</label>
+              <label class="radio-pill"><input type="radio" name="invWorkVideoAbnormal" value="no"> 이상행동이 안 보임</label>
+            </div>
+          </div>
+        </fieldset>
+
+        <div class="inv-step-actions split">
+          <button class="secondary-btn" type="button" data-inv-back="info">← 이전</button>
+          <button class="primary-btn" type="button" data-inv-next="record" id="invEvidenceNextBtn">다음 · 공유기록 →</button>
+        </div>
+      </section>
+
+      <section class="inv-flow-step" data-inv-step="record">
+        <div class="inv-question-head">
+          <p class="inv-step-label">3/4 공유기록</p>
+          <h3>사고를 보고하거나 공유한 기록이 있나요?</h3>
+          <p>카톡, 팀즈, 전화 기록 등 확인 가능한 자료가 있으면 캡처를 첨부할 수 있습니다.</p>
+        </div>
+
+        <fieldset class="check-fieldset inv-card-fieldset">
+          <legend>공유 기록 유무</legend>
+          <label class="check-item"><input type="checkbox" id="invReportImmediate"><span>재해자가 점장/부점장에게 즉시 보고한 기록 있음</span></label>
+          <div id="invReportImmediateWrap" class="conditional-block" style="display:none">
+            <label class="form-full">어떻게 보고했는지 작성
+              <textarea id="invReportImmediateDetail" rows="2" placeholder="예: 사고 직후 재해자가 부점장에게 전화로 알림 → 부점장이 파트장에게 팀즈로 전달"></textarea>
+            </label>
+          </div>
+
+          <label class="check-item"><input type="checkbox" id="invReportChat"><span>카톡/팀즈/전화/라인방 등 기록 있음</span></label>
+          <div id="invReportChatWrap" class="conditional-block" style="display:none">
+            <p class="field-label">증빙 캡처 첨부 (사진 촬영 / 앨범 / 파일)</p>
+            <input type="file" id="invChatFileInput" accept="image/*" multiple hidden>
+            <button type="button" class="secondary-btn" id="invChatAttachBtn" style="margin-bottom:10px;">📎 증빙 첨부</button>
+            <div id="invChatPreview" class="attach-preview"></div>
+          </div>
+        </fieldset>
+
+        <div class="inv-step-actions split">
+          <button class="secondary-btn" type="button" data-inv-back="evidence">← 이전</button>
+          <button class="primary-btn" type="button" data-inv-next="witness">다음 · 목격자 면담 →</button>
+        </div>
+      </section>
+
+      <section class="inv-flow-step" data-inv-step="witness">
+        <div class="inv-question-head">
+          <p class="inv-step-label">4/4 면담</p>
+          <h3>목격자 면담 내용을 작성해주세요.</h3>
+          <p>목격자 본인이 아니라 작성자가 직접 면담하며 들은 내용을 입력합니다.</p>
+        </div>
+
+        <p class="witness-guide-note">한 명 작성 후 <strong>"이 면담 저장"</strong>을 누르면 접히고, <strong>"＋ 면담 추가"</strong>로 다음 목격자를 이어서 작성합니다.</p>
+
+        <div id="witnessList"></div>
+
+        <button class="secondary-btn" id="addWitnessBtn" type="button">＋ 면담 추가</button>
+
+        <div class="inv-step-actions split">
+          <button class="secondary-btn" type="button" data-inv-back="record">← 이전</button>
+          <button class="primary-btn" id="runInvestigationBtn" type="button">검토 완료 · 결과 확인 →</button>
+        </div>
+      </section>
     </div>
-
-    <div id="witnessList"></div>
-
-    <button class="secondary-btn" id="addWitnessBtn" type="button">＋ 면담 추가</button>
-
-    <!-- ⑤ 검토 버튼 -->
-    <button class="primary-btn" id="runInvestigationBtn" type="button" style="margin-top:16px;">검토 완료 · 결과 확인 →</button>
 
   </section>
 
@@ -1190,7 +1226,7 @@
 
     
       <div class="man-footer">
-        <p>직원 사고 발생 시 대응 매뉴얼 · 안전보건팀 · GPT V1.9 모바일 결과보기 · 2026년 하반기 개정판</p>
+        <p>직원 사고 발생 시 대응 매뉴얼 · 안전보건팀 · GPT V1.10 단계형 사고조사 · 2026년 하반기 개정판</p>
       </div>
     </div>
 
@@ -1227,13 +1263,13 @@
 <!-- 결과 문서를 실제 PDF 파일로 만들어 Teams 카드용 첨부파일을 만들기 위한 라이브러리 (오픈소스, MIT 라이선스) -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="assets/js/search-data.js?v=gpt-v1-10"></script>
-<script src="assets/js/faq-data.js?v=gpt-v1-10"></script>
-<script src="assets/js/org-data.js?v=gpt-v1-10"></script>
-<script src="assets/js/investigation.js?v=gpt-v1-10"></script>
-<script src="assets/js/auth.js?v=gpt-v1-10"></script>
-<script src="assets/js/manual.js?v=gpt-v1-10"></script>
-<script src="assets/js/main.js?v=gpt-v1-10"></script>
+<script src="assets/js/search-data.js?v=gpt-v1-11"></script>
+<script src="assets/js/faq-data.js?v=gpt-v1-11"></script>
+<script src="assets/js/org-data.js?v=gpt-v1-11"></script>
+<script src="assets/js/investigation.js?v=gpt-v1-11"></script>
+<script src="assets/js/auth.js?v=gpt-v1-11"></script>
+<script src="assets/js/manual.js?v=gpt-v1-11"></script>
+<script src="assets/js/main.js?v=gpt-v1-11"></script>
 </body>
 </html>
 
