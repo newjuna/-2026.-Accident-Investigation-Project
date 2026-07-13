@@ -889,9 +889,8 @@ document.addEventListener('DOMContentLoaded', () => {
   function setSharePdfAvailability() {
     const btn = document.getElementById('sharePdfBtn');
     if (!btn) return;
-    const ready = !!getLastPdfBlob();
-    btn.disabled = !ready;
-    btn.title = ready ? '' : 'PDF 생성이 완료된 뒤 공유할 수 있습니다.';
+    btn.disabled = false;
+    btn.title = '서버에서 생성된 PDF 링크는 전송된 카드의 결과문서 보기 버튼에서 확인할 수 있습니다.';
   }
 
   function drawWrappedText(ctx, text, x, y, maxWidth, lineHeight) {
@@ -1209,7 +1208,7 @@ document.addEventListener('DOMContentLoaded', () => {
       `면담자명 : ${payload.interviewerNames || '-'}`,
       `검토결과 : ${payload.verdict}`,
       `첨부파일 : ${attachCount}건`,
-      '결과문서 PDF : 서버에서 생성 후 Teams 카드에 링크로 첨부',
+      '결과문서 PDF : 서버에서 생성 후 전송 카드에 링크로 첨부',
       '',
       '판단 사유',
       ...(payload.reasons || []).map(r => '- ' + r)
@@ -1250,7 +1249,7 @@ document.addEventListener('DOMContentLoaded', () => {
       setTeamsModalState('pre');
       if (noteEl) {
         noteEl.textContent = INV_TEAMS_ENDPOINT_URL
-          ? '"전송하기"를 누르면 서버에서 결과문서 PDF를 만들어 Teams 채널·개인 쪽지에 링크로 게시하고 기록을 저장합니다.'
+          ? '"전송하기"를 누르면 서버에서 결과문서 PDF를 만들어 링크로 게시하고 기록을 저장합니다.'
           : '전송 연동 주소가 아직 설정되지 않아 미리보기만 가능합니다. (assets/js/investigation.js 상단의 INV_TEAMS_ENDPOINT_URL 값을 설정하세요)';
       }
       if (modal) modal.classList.add('visible');
@@ -1304,7 +1303,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     if (statusEl) {
-      statusEl.textContent = '3/3 서버에서 PDF를 만들고 Teams로 전송 중입니다... (최대 60초)';
+      statusEl.textContent = '3/3 서버에서 PDF를 만들고 전송 중입니다... (최대 60초)';
     }
     if (buttonEl) buttonEl.textContent = '⏳ 3/3 최종 전송 중...';
     await postToEndpoint(Object.assign({}, basePayload, { action: 'finalizeSubmission' }), 60000);
@@ -1345,7 +1344,7 @@ document.addEventListener('DOMContentLoaded', () => {
         })
         .then(() => {
           if (statusEl) {
-            statusEl.textContent = '✅ 전송 요청을 완료했습니다. Teams 도착 여부를 확인해주세요.';
+            statusEl.textContent = '✅ 전송 요청을 완료했습니다. 전송 카드 도착 여부를 확인해주세요.';
             statusEl.className = 'teams-send-status teams-send-ok';
           }
           // 서버에서 PDF를 만들기 때문에 휴대폰 공유 버튼은 로컬 PDF가 있을 때만 활성화됩니다.
@@ -1382,43 +1381,16 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   /* =========================================================
-     PDF 공유하기 — 휴대폰 표준 공유시트를 띄워 Teams·카카오톡 등
-     원하는 앱으로 방금 만든 PDF 파일을 직접 보낼 수 있게 합니다.
-     (Web Share API — 파일 공유는 모바일 브라우저에서만 지원됩니다)
+     PDF 링크 확인 안내
+     ---------------------------------------------------------
+     모바일 안정 전송 구조에서는 PDF가 휴대폰이 아니라 Apps Script 서버에서
+     생성되어 Drive에 저장됩니다. 링크는 전송된 카드의 "결과문서 보기" 버튼에
+     붙으므로, 이 버튼은 사용자를 그 위치로 안내합니다.
      ========================================================= */
   const sharePdfBtn = document.getElementById('sharePdfBtn');
   if (sharePdfBtn) {
     sharePdfBtn.addEventListener('click', () => {
-      const blob = getLastPdfBlob();
-      if (!blob) {
-        alert('공유할 PDF가 없습니다. "전송하기"를 먼저 눌러 PDF를 생성해주세요.');
-        return;
-      }
-      const result = window.__investigationResult || computeJudgement();
-      const b = result.base;
-      const dateStr = (b.invIncidentDate || '').replace(/-/g, '') || 'unknown';
-      const storeStr = (b.invStoreName || '매장').replace(/[\\/:*?"<>|]/g, '');
-      const fileName = `${dateStr}_${storeStr}_사고조사결과.pdf`;
-      const file = new File([blob], fileName, { type: 'application/pdf' });
-
-      if (navigator.canShare && navigator.canShare({ files: [file] })) {
-        navigator.share({
-          files: [file],
-          title: '사고조사 결과 문서',
-          text: '사고조사 결과 문서를 확인해주세요.'
-        }).catch(() => { /* 사용자가 공유를 취소한 경우 등 - 별도 처리 불필요 */ });
-      } else {
-        // 공유 API를 지원하지 않는 환경(주로 PC 브라우저)에서는 파일 다운로드로 대체
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = fileName;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        setTimeout(() => URL.revokeObjectURL(url), 3000);
-        alert('이 기기·브라우저에서는 공유 기능을 지원하지 않아 PDF를 다운로드했습니다. 다운로드된 파일을 Teams 앱에서 직접 첨부해주세요.');
-      }
+      alert('PDF는 서버에서 생성되어 전송된 카드의 "결과문서 보기" 버튼으로 확인할 수 있습니다.');
     });
   }
 
