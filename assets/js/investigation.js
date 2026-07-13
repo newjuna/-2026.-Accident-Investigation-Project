@@ -30,7 +30,7 @@ const INV_DOWNLOAD_TOKEN_KEY = 'fieldGuide_investigation_downloadToken';
  * "Teams로 전송" 버튼이 실제로 동작합니다.
  * 비워두면 미리보기만 표시되고 실제 전송은 되지 않습니다.
  */
-const INV_TEAMS_ENDPOINT_URL = 'https://script.google.com/macros/s/AKfycbw13fTYnJTQoAk-Fmo1-x3kGmz7zErKd8KBTJ0Y5JSMAgkbfLLNNE9q2KpsMtmyRNIS/exec'; // 예: 'https://script.google.com/macros/s/AKfycb.../exec' (새로 배포한 뒤 여기에 붙여넣기)
+const INV_TEAMS_ENDPOINT_URL = ''; // 예: 'https://script.google.com/macros/s/AKfycb.../exec' (새로 배포한 뒤 여기에 붙여넣기)
 
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -128,7 +128,7 @@ document.addEventListener('DOMContentLoaded', () => {
     'invAuthorName', 'invVictimName', 'invIncidentPlace',
     'invIncidentDate', 'invIncidentTime', 'invReportImmediateDetail'
   ];
-  const BASE_CHECK_IDS = ['invReportImmediate', 'invReportChat'];
+  const BASE_CHECK_IDS = ['invReportImmediate', 'invReportChat', 'invNoWitness'];
   const BASE_RADIO_NAMES = ['invCctv', 'invWorkVideoAbnormal'];
 
   /* ---------- 조직 정보 3단 연동 드롭다운 (부문 > 부서 > 팀) ---------- */
@@ -258,6 +258,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (wrap) {
       const show = (cctv === 'unclear' || cctv === 'none');
       wrap.style.display = show ? 'block' : 'none';
+      wrap.classList.toggle('is-visible', show);
       if (!show) {
         document.querySelectorAll('input[name="invWorkVideoAbnormal"]').forEach(r => { r.checked = false; });
       }
@@ -266,39 +267,161 @@ document.addEventListener('DOMContentLoaded', () => {
     // "즉시 보고한 기록 있음" 체크 시 → 어떻게 보고했는지 작성란 표시
     const reportImm = document.getElementById('invReportImmediate');
     const reportImmWrap = document.getElementById('invReportImmediateWrap');
+    const reportChat = document.getElementById('invReportChat');
+    const reportChatWrap = document.getElementById('invReportChatWrap');
+    const reportChoice = (document.querySelector('input[name="invReportRecord"]:checked') || {}).value;
+    if (reportChoice === 'yes') {
+      if (reportChat) reportChat.checked = true;
+      if (reportImm) reportImm.checked = false;
+    } else if (reportChoice === 'no') {
+      if (reportChat) reportChat.checked = false;
+      if (reportImm) reportImm.checked = true;
+    }
     if (reportImm && reportImmWrap) {
       reportImmWrap.style.display = reportImm.checked ? 'block' : 'none';
+      reportImmWrap.classList.toggle('is-visible', reportImm.checked);
     }
 
     // "카톡/팀즈 등 기록 있음" 체크 시 → 증빙 첨부 영역 표시
-    const reportChat = document.getElementById('invReportChat');
-    const reportChatWrap = document.getElementById('invReportChatWrap');
     if (reportChat && reportChatWrap) {
       reportChatWrap.style.display = reportChat.checked ? 'block' : 'none';
+      reportChatWrap.classList.toggle('is-visible', reportChat.checked);
     }
   }
 
   function refreshRadioPillStyles() {
     panel.querySelectorAll('.radio-pill').forEach(label => {
-      const input = label.querySelector('input[type="radio"]');
+      const input = label.querySelector('input[type="radio"], input[type="checkbox"]');
       if (input) label.classList.toggle('is-checked', input.checked);
     });
   }
 
+  function openSimpleModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) modal.classList.add('visible');
+  }
+
+  function closeSimpleModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) modal.classList.remove('visible');
+  }
+
+  function bindSimpleModal(openId, modalId, closeId) {
+    const openBtn = document.getElementById(openId);
+    const closeBtn = document.getElementById(closeId);
+    const modal = document.getElementById(modalId);
+    if (openBtn) openBtn.addEventListener('click', () => openSimpleModal(modalId));
+    if (closeBtn) closeBtn.addEventListener('click', () => closeSimpleModal(modalId));
+    if (modal) {
+      modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeSimpleModal(modalId);
+      });
+    }
+  }
+
+  function setSeqActive(name, active) {
+    const el = panel.querySelector(`[data-inv-reveal="${name}"]`);
+    if (el) el.classList.toggle('active', active);
+  }
+
+  function updateInfoRevealState() {
+    setSeqActive('division', true);
+    setSeqActive('dept', hasValue('invDivision'));
+    setSeqActive('team', hasValue('invDept'));
+    setSeqActive('store', hasValue('invTeam'));
+    setSeqActive('author', hasValue('invStoreName'));
+    setSeqActive('date', hasValue('invAuthorName'));
+  }
+
+  function getFlowStep(stepName) {
+    return panel.querySelector(`.inv-flow-step[data-inv-step="${stepName}"]`);
+  }
+
+  function setInvestigationStep(stepName) {
+    panel.querySelectorAll('.inv-flow-step').forEach(step => {
+      step.classList.toggle('active', step.dataset.invStep === stepName);
+    });
+    panel.querySelectorAll('[data-inv-progress]').forEach(item => {
+      item.classList.toggle('active', item.dataset.invProgress === stepName);
+    });
+    const activeStep = getFlowStep(stepName);
+    if (activeStep) activeStep.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    updateInvestigationFlowState();
+  }
+
+  function hasValue(id) {
+    const el = document.getElementById(id);
+    return !!(el && String(el.value || '').trim());
+  }
+
+  function isInfoStepReady() {
+    return ['invDivision', 'invDept', 'invTeam', 'invStoreName', 'invAuthorName', 'invIncidentDate'].every(hasValue);
+  }
+
+  function isEvidenceStepReady() {
+    const cctv = (document.querySelector('input[name="invCctv"]:checked') || {}).value;
+    if (!cctv) return false;
+    if (cctv === 'clear') return true;
+    return !!(document.querySelector('input[name="invWorkVideoAbnormal"]:checked') || {}).value;
+  }
+
+  function updateInvestigationFlowState() {
+    const infoReady = isInfoStepReady();
+    const evidenceReady = isEvidenceStepReady();
+    const infoBtn = document.getElementById('invInfoNextBtn');
+    const evidenceBtn = document.getElementById('invEvidenceNextBtn');
+    const infoHint = document.getElementById('invInfoHint');
+    if (infoBtn) infoBtn.disabled = !infoReady;
+    if (evidenceBtn) evidenceBtn.disabled = !evidenceReady;
+    if (infoHint) {
+      infoHint.textContent = infoReady
+        ? '정보 입력이 완료되었습니다. 다음 단계로 이동하세요.'
+        : '필수 정보를 입력하면 다음 단계로 이동할 수 있습니다.';
+      infoHint.classList.toggle('ready', infoReady);
+    }
+    updateInfoRevealState();
+  }
+
+  panel.querySelectorAll('[data-inv-next]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (btn.disabled) return;
+      setInvestigationStep(btn.dataset.invNext);
+    });
+  });
+
+  panel.querySelectorAll('[data-inv-back]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      setInvestigationStep(btn.dataset.invBack);
+    });
+  });
+
+  bindSimpleModal('invGuideBtn', 'invGuideModal', 'invGuideCloseBtn');
+  bindSimpleModal('invCaseHelpBtn', 'invCaseHelpModal', 'invCaseHelpCloseBtn');
+  bindSimpleModal('invCctvHelpBtn', 'invCctvHelpModal', 'invCctvHelpCloseBtn');
+  bindSimpleModal('invRecordHelpBtn', 'invRecordHelpModal', 'invRecordHelpCloseBtn');
+  bindSimpleModal('invWitnessHelpBtn', 'invWitnessHelpModal', 'invWitnessHelpCloseBtn');
+
   restoreBaseData();
+  const reportChatSaved = document.getElementById('invReportChat')?.checked;
+  const reportImmediateSaved = document.getElementById('invReportImmediate')?.checked;
+  const savedReportRadio = document.querySelector(`input[name="invReportRecord"][value="${reportChatSaved ? 'yes' : (reportImmediateSaved ? 'no' : '')}"]`);
+  if (savedReportRadio) savedReportRadio.checked = true;
   refreshConditional();
   refreshRadioPillStyles();
+  updateInvestigationFlowState();
 
   // 기본정보/확인자료 영역의 입력 변화 감지 (면담 카드 영역은 제외)
   panel.addEventListener('input', (e) => {
     if (e.target.closest('#witnessList')) return;
     saveBaseData();
+    updateInvestigationFlowState();
   });
   panel.addEventListener('change', (e) => {
     if (e.target.closest('#witnessList')) return;
     saveBaseData();
     refreshConditional();
     refreshRadioPillStyles();
+    updateInvestigationFlowState();
   });
 
   /* ---------- 카톡·팀즈 증빙 캡처 첨부 ---------- */
@@ -421,7 +544,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // 진술 분류(자동)
   function classify(w) {
     const t = w.stmtType;
-    const specific = w.specific === 'yes';
+    const specific = w.specific !== 'no';
     if (t === 'direct') {
       return specific
         ? { type: 'direct', label: '직접 근거 (구체적)' }
@@ -623,14 +746,29 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  const noWitnessCheckbox = document.getElementById('invNoWitness');
+  function refreshNoWitnessState() {
+    const active = !!(noWitnessCheckbox && noWitnessCheckbox.checked);
+    panel.classList.toggle('witness-none-active', active);
+  }
+  if (noWitnessCheckbox) {
+    noWitnessCheckbox.addEventListener('change', () => {
+      refreshNoWitnessState();
+      saveBaseData();
+    });
+  }
+
   restoreWitnesses();
+  refreshNoWitnessState();
 
   /* =========================================================
      3. 최종 판단 로직
      ========================================================= */
   function computeJudgement() {
     const base = readBaseData();
-    const witnesses = Array.from(witnessList.querySelectorAll('.witness-card')).map(readCard);
+    const witnesses = noWitnessCheckbox && noWitnessCheckbox.checked
+      ? []
+      : Array.from(witnessList.querySelectorAll('.witness-card')).map(readCard);
     const classified = witnesses.map(w => ({ w, c: classify(w) }));
 
     const hasDirectSpecific = classified.some(x => x.c.type === 'direct');
@@ -829,6 +967,63 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // 문서 미리보기(사용자가 직접 수정한 내용 포함)를 순수 텍스트로 변환 — 구글시트 '문서내용' 컬럼 등에 사용
+  function normalizeDocPreview(result, author) {
+    const preview = document.getElementById('invDocPreview');
+    if (!preview) return;
+    const title = preview.querySelector('.doc-header-title');
+    if (title) title.textContent = '사고조사 결과 확인서';
+
+    const verdict = preview.querySelector('.doc-verdict-banner');
+    if (verdict) {
+      if (result.verdict === 'unrecognized') {
+        verdict.className = 'doc-verdict-banner doc-verdict-no';
+        verdict.textContent = '검토 결과 : 불인정 검토';
+      } else {
+        verdict.remove();
+      }
+    }
+
+    const cells = Array.from(preview.querySelectorAll('.doc-info-cell'));
+    if (cells[4]) cells[4].remove();
+    const authorCell = Array.from(preview.querySelectorAll('.doc-info-cell')).find(cell => cell.textContent.indexOf(author) !== -1);
+    if (authorCell && !preview.querySelector('[data-doc-written-at]')) {
+      const written = document.createElement('div');
+      written.className = 'doc-info-cell';
+      written.setAttribute('data-doc-written-at', 'true');
+      written.innerHTML = '<span class="doc-info-label">작성일</span><span class="doc-info-value">' + escapeHtml(new Date().toLocaleDateString('ko-KR')) + '</span>';
+      authorCell.after(written);
+    }
+
+    if (result.verdict !== 'unrecognized') {
+      preview.querySelectorAll('.doc-appendix-box').forEach(box => {
+        const section = box.closest('.doc-section');
+        if (section) section.remove();
+      });
+    }
+
+    const footer = preview.querySelector('.doc-footer-note');
+    if (footer) footer.textContent = '산재 승인 여부의 최종 판단은 근로복지공단에서 결정합니다.';
+  }
+
+  function addSignatureWrittenDate() {
+    const preview = document.getElementById('invDocPreview');
+    if (!preview) return;
+    preview.querySelectorAll('[data-doc-written-at]').forEach(el => {
+      const cell = el.closest('.doc-info-cell');
+      if (cell) cell.remove();
+    });
+    const signature = preview.querySelector('.doc-signature-row');
+    if (signature && !preview.querySelector('[data-doc-sign-date]')) {
+      const writtenLabel = document.createElement('span');
+      writtenLabel.textContent = '작성일';
+      const written = document.createElement('span');
+      written.className = 'doc-written-date';
+      written.setAttribute('data-doc-sign-date', 'true');
+      written.textContent = new Date().toLocaleDateString('ko-KR');
+      signature.prepend(writtenLabel, written);
+    }
+  }
+
   function docPreviewToPlainText() {
     const preview = document.getElementById('invDocPreview');
     return preview ? preview.innerText.trim() : '';
@@ -850,21 +1045,52 @@ document.addEventListener('DOMContentLoaded', () => {
         ${classifyRows ? `<p class="field-label" style="text-align:left;">면담별 분류</p><ul class="judge-reason-list">${classifyRows}</ul>` : ''}
       </div>
     `;
+    if (result.verdict !== 'unrecognized') {
+      document.getElementById('invResultArea').innerHTML = '';
+    }
 
     // 결과 종류와 무관하게 항상 정식 확인서 형태의 문서를 렌더링해 PDF/Teams로 남길 수 있게 함
     const docBox = document.getElementById('invDocBox');
     if (docBox) {
       renderDocPreview(result);
+      normalizeDocPreview(result, result.base.invAuthorName || '-');
+      addSignatureWrittenDate();
       docBox.style.display = 'block';
     }
+  }
+
+  function showInvestigationResult(result) {
+    window.__investigationResult = result;
+    renderResult(result);
+    const overlay = document.getElementById('invResultOverlay');
+    if (overlay) {
+      overlay.classList.add('visible');
+      const body = overlay.querySelector('.inv-result-body');
+      if (body) body.scrollTo({ top: 0 });
+    }
+    setTimeout(() => {
+      const reason = document.querySelector('#invDocPreview .doc-reason-list');
+      if (!reason) return;
+      reason.classList.remove('reason-highlight');
+      void reason.offsetWidth;
+      reason.classList.add('reason-highlight');
+      setTimeout(() => reason.classList.remove('reason-highlight'), 2100);
+    }, 350);
   }
 
   const runBtn = document.getElementById('runInvestigationBtn');
   if (runBtn) {
     runBtn.addEventListener('click', () => {
       const result = computeJudgement();
-      window.__investigationResult = result;
-      renderResult(result);
+      window.__pendingInvestigationResult = result;
+      const guide = document.getElementById('invReviewGuideOverlay');
+      if (guide) {
+        guide.classList.add('visible');
+        guide.setAttribute('aria-hidden', 'false');
+        return;
+      }
+      showInvestigationResult(result);
+      return;
       // 결과를 아래로 이어붙이는 대신, 새 화면처럼 전체를 덮는 오버레이로 전환합니다.
       const overlay = document.getElementById('invResultOverlay');
       if (overlay) {
@@ -872,6 +1098,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const body = overlay.querySelector('.inv-result-body');
         if (body) body.scrollTo({ top: 0 });
       }
+    });
+  }
+
+  const invReviewGuideOkBtn = document.getElementById('invReviewGuideOkBtn');
+  if (invReviewGuideOkBtn) {
+    invReviewGuideOkBtn.addEventListener('click', () => {
+      const guide = document.getElementById('invReviewGuideOverlay');
+      if (guide) {
+        guide.classList.remove('visible');
+        guide.setAttribute('aria-hidden', 'true');
+      }
+      showInvestigationResult(window.__pendingInvestigationResult || computeJudgement());
     });
   }
 
