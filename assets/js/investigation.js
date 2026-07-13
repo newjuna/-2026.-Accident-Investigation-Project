@@ -21,6 +21,7 @@
 const INV_BASE_KEY = 'fieldGuide_investigation_base';
 const INV_WITNESS_KEY = 'fieldGuide_investigation_witnesses';
 const INV_CASE_ID_KEY = 'fieldGuide_investigation_caseId';
+const INV_DOWNLOAD_TOKEN_KEY = 'fieldGuide_investigation_downloadToken';
 
 /*
  * [Teams/기록관리 연동]
@@ -29,7 +30,7 @@ const INV_CASE_ID_KEY = 'fieldGuide_investigation_caseId';
  * "Teams로 전송" 버튼이 실제로 동작합니다.
  * 비워두면 미리보기만 표시되고 실제 전송은 되지 않습니다.
  */
-const INV_TEAMS_ENDPOINT_URL = 'https://script.google.com/macros/s/AKfycbydVn65UnREx3NDqymqhRs7IcdoFbM-Qc-D9o478UjrzxTxFupLdVDtpujfdrsPCrs/exec'; // 예: 'https://script.google.com/macros/s/AKfycb.../exec' (새로 배포한 뒤 여기에 붙여넣기)
+const INV_TEAMS_ENDPOINT_URL = ''; // 예: 'https://script.google.com/macros/s/AKfycb.../exec' (새로 배포한 뒤 여기에 붙여넣기)
 
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -75,6 +76,30 @@ document.addEventListener('DOMContentLoaded', () => {
     return id;
   }
 
+  function generateDownloadToken() {
+    const bytes = new Uint8Array(24);
+    if (window.crypto && window.crypto.getRandomValues) {
+      window.crypto.getRandomValues(bytes);
+      return Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+    }
+    return `${Date.now().toString(36)}${Math.random().toString(36).slice(2)}${Math.random().toString(36).slice(2)}`;
+  }
+
+  function getOrCreateDownloadToken() {
+    let token = localStorage.getItem(INV_DOWNLOAD_TOKEN_KEY);
+    if (!token) {
+      token = generateDownloadToken();
+      localStorage.setItem(INV_DOWNLOAD_TOKEN_KEY, token);
+    }
+    return token;
+  }
+
+  function buildDownloadUrl(caseId, token) {
+    if (!INV_TEAMS_ENDPOINT_URL || !caseId || !token) return '';
+    const sep = INV_TEAMS_ENDPOINT_URL.includes('?') ? '&' : '?';
+    return `${INV_TEAMS_ENDPOINT_URL}${sep}mode=download&caseId=${encodeURIComponent(caseId)}&token=${encodeURIComponent(token)}&t=${Date.now()}`;
+  }
+
   function renderCaseId() {
     const display = document.getElementById('invCaseIdDisplay');
     if (display) display.textContent = getOrCreateCaseId();
@@ -88,6 +113,7 @@ document.addEventListener('DOMContentLoaded', () => {
       localStorage.removeItem(INV_BASE_KEY);
       localStorage.removeItem(INV_WITNESS_KEY);
       localStorage.removeItem(INV_CASE_ID_KEY);
+      localStorage.removeItem(INV_DOWNLOAD_TOKEN_KEY);
       location.reload();
     });
   }
@@ -881,6 +907,7 @@ document.addEventListener('DOMContentLoaded', () => {
   function resetLastPdf() {
     window.__lastPdfBlob = null;
     window.__lastDocumentLink = '';
+    window.__lastDownloadUrl = '';
   }
 
   function getLastPdfBlob() {
@@ -890,9 +917,9 @@ document.addEventListener('DOMContentLoaded', () => {
   function setSharePdfAvailability() {
     const btn = document.getElementById('sharePdfBtn');
     if (!btn) return;
-    const ready = !!window.__lastDocumentLink;
+    const ready = !!(window.__lastDownloadUrl || window.__lastDocumentLink);
     btn.disabled = !ready;
-    btn.title = ready ? '생성된 PDF를 엽니다.' : 'PDF 링크를 확인하는 중입니다.';
+    btn.title = ready ? '생성된 PDF를 열거나 다운로드합니다.' : 'PDF 링크를 확인하는 중입니다.';
   }
 
   function updateSubmitOverlay(step, message, progress) {
@@ -1180,6 +1207,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     return {
       caseId: getOrCreateCaseId(),
+      downloadToken: getOrCreateDownloadToken(),
       title: '사고조사 결과 접수',
       division: b.invDivision,
       department: b.invDept,
@@ -1411,6 +1439,9 @@ document.addEventListener('DOMContentLoaded', () => {
     await postToEndpoint(Object.assign({}, basePayload, { action: 'finalizeSubmission' }), 60000);
     updateSubmitOverlay('결과 PDF 확인', '생성된 PDF 링크를 확인하는 중입니다.', 92);
     window.__lastDocumentLink = await waitForDocumentLink(payload.caseId, statusEl);
+    window.__lastDownloadUrl = window.__lastDocumentLink
+      ? buildDownloadUrl(payload.caseId, payload.downloadToken)
+      : '';
   }
 
   const sendTeamsNowBtn = document.getElementById('sendTeamsNowBtn');
@@ -1451,10 +1482,10 @@ document.addEventListener('DOMContentLoaded', () => {
         })
         .then(() => {
           if (statusEl) {
-            statusEl.textContent = window.__lastDocumentLink
-              ? '✅ 전송이 완료되었습니다. 결과보기를 눌러 PDF를 확인하세요.'
+            statusEl.textContent = window.__lastDownloadUrl
+              ? '✅ 전송이 완료되었습니다. 결과보기를 눌러 PDF를 열거나 다운로드하세요.'
               : '✅ 전송은 완료되었습니다. PDF 링크는 전송 카드에서 확인하세요.';
-            statusEl.className = window.__lastDocumentLink
+            statusEl.className = window.__lastDownloadUrl
               ? 'teams-send-status teams-send-ok'
               : 'teams-send-status';
           }
@@ -1463,8 +1494,8 @@ document.addEventListener('DOMContentLoaded', () => {
           if (teamsModalEl) teamsModalEl.classList.remove('visible');
           updateSubmitOverlay(
             '전송 완료',
-            window.__lastDocumentLink
-              ? '결과보기를 눌러 생성된 PDF를 확인하고 저장할 수 있습니다.'
+            window.__lastDownloadUrl
+              ? '결과보기를 눌러 생성된 PDF를 열거나 다운로드할 수 있습니다.'
               : '전송은 완료되었습니다. 전송 카드에서 결과문서 보기를 확인해주세요.',
             100
           );
@@ -1512,22 +1543,24 @@ document.addEventListener('DOMContentLoaded', () => {
   const sharePdfBtn = document.getElementById('sharePdfBtn');
   if (sharePdfBtn) {
     sharePdfBtn.addEventListener('click', () => {
-      if (window.__lastDocumentLink) {
-        window.open(window.__lastDocumentLink, '_blank', 'noopener');
+      const url = window.__lastDownloadUrl || window.__lastDocumentLink;
+      if (url) {
+        window.open(url, '_blank', 'noopener');
         return;
       }
-      alert('PDF 링크를 아직 확인하지 못했습니다. 전송된 카드의 "결과문서 보기" 버튼에서 확인해주세요.');
+      alert('PDF를 아직 확인하지 못했습니다. 전송이 끝난 뒤 다시 눌러주세요.');
     });
   }
 
   const submitResultBtn = document.getElementById('submitResultBtn');
   if (submitResultBtn) {
     submitResultBtn.addEventListener('click', () => {
-      if (window.__lastDocumentLink) {
-        window.open(window.__lastDocumentLink, '_blank', 'noopener');
+      const url = window.__lastDownloadUrl || window.__lastDocumentLink;
+      if (url) {
+        window.open(url, '_blank', 'noopener');
         return;
       }
-      alert('PDF 링크를 아직 확인하지 못했습니다. 전송된 카드의 "결과문서 보기" 버튼에서 확인해주세요.');
+      alert('PDF를 아직 확인하지 못했습니다. 전송이 끝난 뒤 다시 눌러주세요.');
     });
   }
 
