@@ -989,6 +989,19 @@ button {
   display: block;
 }
 
+.attach-size {
+  position: absolute;
+  left: 4px;
+  bottom: 4px;
+  padding: 2px 5px;
+  border-radius: 999px;
+  background: rgba(15, 31, 61, 0.78);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
 .attach-thumb-remove {
   position: absolute;
   top: 3px;
@@ -2366,4 +2379,58 @@ button {
 .guide-footer .primary-btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+
+
+/* =========================================================
+   사고조사 검토 결과 - 새 화면(전체 오버레이)으로 표시
+   ========================================================= */
+.inv-result-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  background: var(--gray-100);
+  flex-direction: column;
+}
+
+.inv-result-overlay.visible { display: flex; }
+
+.inv-result-header {
+  flex-shrink: 0;
+  background: linear-gradient(135deg, var(--navy-900), var(--navy-800));
+  color: #fff;
+  padding: 16px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: var(--shadow-md);
+}
+
+.inv-result-back-btn {
+  border: none;
+  background: rgba(255,255,255,0.12);
+  color: #fff;
+  font-size: 13.5px;
+  font-weight: 600;
+  padding: 8px 14px;
+  border-radius: 10px;
+  cursor: pointer;
+  font-family: inherit;
+  touch-action: manipulation;
+}
+
+.inv-result-header-title {
+  font-size: 16px;
+  font-weight: 800;
+  margin: 0;
+}
+
+.inv-result-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 18px 16px 40px;
+  max-width: 720px;
+  margin: 0 auto;
+  width: 100%;
 }
