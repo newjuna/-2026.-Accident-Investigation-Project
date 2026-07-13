@@ -2915,3 +2915,100 @@ button {
     transform: scale(1);
   }
 }
+
+
+/* ---------- GPT V1.17 로그인 후 메인 선택 화면 ---------- */
+.home-hero {
+  margin: 4px 0 18px;
+  padding: 22px 20px;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(135deg, var(--navy-900), var(--navy-800));
+  color: var(--white);
+  box-shadow: var(--shadow-md);
+}
+.home-eyebrow {
+  margin: 0 0 6px;
+  color: #f6c453;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+.home-hero h2 {
+  margin: 0 0 6px;
+  font-size: 22px;
+  line-height: 1.35;
+}
+.home-hero > p:last-child {
+  margin: 0;
+  color: #d6e0f2;
+  font-size: 13.5px;
+}
+.home-menu-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+.home-menu-card {
+  width: 100%;
+  min-height: 104px;
+  display: grid;
+  grid-template-columns: 50px 1fr 24px;
+  align-items: center;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-lg);
+  background: var(--white);
+  color: var(--ink);
+  font-family: inherit;
+  text-align: left;
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+}
+.home-menu-card:active {
+  transform: translateY(1px);
+}
+.home-menu-icon {
+  width: 50px;
+  height: 50px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 15px;
+  background: var(--blue-100);
+  font-size: 24px;
+}
+.home-menu-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.home-menu-text strong {
+  color: var(--navy-900);
+  font-size: 17px;
+  font-weight: 800;
+}
+.home-menu-text small {
+  color: var(--gray-500);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+.home-menu-arrow {
+  color: var(--navy-700);
+  font-size: 20px;
+  font-weight: 800;
+}
+.home-menu-investigation { border-left: 4px solid var(--red-600); }
+.home-menu-manual { border-left: 4px solid var(--navy-700); }
+.home-menu-search { border-left: 4px solid #f6c453; }
+
+@media (min-width: 640px) {
+  .home-menu-grid { grid-template-columns: repeat(3, 1fr); }
+  .home-menu-card {
+    min-height: 190px;
+    grid-template-columns: 1fr;
+    justify-items: start;
+    align-content: center;
+  }
+  .home-menu-arrow { justify-self: end; }
+}
