@@ -989,6 +989,19 @@ button {
   display: block;
 }
 
+.attach-size {
+  position: absolute;
+  left: 4px;
+  bottom: 4px;
+  padding: 2px 5px;
+  border-radius: 999px;
+  background: rgba(15, 31, 61, 0.78);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
 .attach-thumb-remove {
   position: absolute;
   top: 3px;
@@ -1119,6 +1132,115 @@ button {
 
 .teams-send-ok { color: var(--green-600); font-weight: 700; }
 .teams-send-error { color: var(--red-600); font-weight: 700; }
+
+/* ---------- 전송 진행 잠금 팝업 ---------- */
+.submit-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 5000;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(13, 27, 54, 0.72);
+  backdrop-filter: blur(5px);
+}
+
+.submit-overlay.visible {
+  display: flex;
+}
+
+.submit-box {
+  width: 100%;
+  max-width: 360px;
+  background: var(--white);
+  border-radius: var(--radius-lg);
+  padding: 26px 22px 22px;
+  text-align: center;
+  box-shadow: 0 18px 50px rgba(15, 31, 61, 0.25);
+}
+
+.submit-spinner {
+  width: 42px;
+  height: 42px;
+  margin: 0 auto 14px;
+  border-radius: 50%;
+  border: 4px solid var(--gray-200);
+  border-top-color: var(--red-600);
+  animation: submitSpin 0.85s linear infinite;
+}
+
+.submit-spinner.done {
+  border-color: var(--green-600);
+  animation: none;
+  position: relative;
+}
+
+.submit-spinner.done::after {
+  content: "";
+  position: absolute;
+  left: 12px;
+  top: 7px;
+  width: 12px;
+  height: 20px;
+  border: solid var(--green-600);
+  border-width: 0 4px 4px 0;
+  transform: rotate(45deg);
+}
+
+.submit-eyebrow {
+  margin: 0 0 4px;
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--red-600);
+  letter-spacing: 0.6px;
+}
+
+.submit-box h3 {
+  margin: 0 0 8px;
+  color: var(--navy-900);
+  font-size: 18px;
+}
+
+.submit-message {
+  min-height: 42px;
+  margin: 0 0 14px;
+  color: var(--gray-700);
+  font-size: 13px;
+  line-height: 1.45;
+  white-space: pre-line;
+}
+
+.submit-progress-track {
+  width: 100%;
+  height: 8px;
+  border-radius: 999px;
+  background: var(--gray-200);
+  overflow: hidden;
+}
+
+.submit-progress-fill {
+  width: 8%;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--red-600);
+  transition: width 0.25s ease;
+}
+
+.submit-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.submit-actions button {
+  flex: 1;
+  margin-bottom: 0;
+}
+
+@keyframes submitSpin {
+  to { transform: rotate(360deg); }
+}
 
 /* ---------- 사고조사 결과 문서 미리보기 (정식 문서 형태) ---------- */
 .doc-preview {
