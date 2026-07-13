@@ -30,7 +30,7 @@ const INV_DOWNLOAD_TOKEN_KEY = 'fieldGuide_investigation_downloadToken';
  * "Teams로 전송" 버튼이 실제로 동작합니다.
  * 비워두면 미리보기만 표시되고 실제 전송은 되지 않습니다.
  */
-const INV_TEAMS_ENDPOINT_URL = 'https://script.google.com/macros/s/AKfycbyBjA0GZyRLKdrbV0NnoXf0Eye0-f8lqdnScqchQYX6WPrqO9kMY9VI3C7AIdZd1HQK/exec'; // 예: 'https://script.google.com/macros/s/AKfycb.../exec' (새로 배포한 뒤 여기에 붙여넣기)
+const INV_TEAMS_ENDPOINT_URL = ''; // 예: 'https://script.google.com/macros/s/AKfycb.../exec' (새로 배포한 뒤 여기에 붙여넣기)
 
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -395,6 +395,20 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
+  // 상단 진행 탭을 직접 눌러 원하는 작성 단계로 이동
+  panel.querySelectorAll('[data-inv-progress]').forEach(tab => {
+    tab.setAttribute('role', 'button');
+    tab.setAttribute('tabindex', '0');
+    const move = () => setInvestigationStep(tab.dataset.invProgress);
+    tab.addEventListener('click', move);
+    tab.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        move();
+      }
+    });
+  });
+
   bindSimpleModal('invGuideBtn', 'invGuideModal', 'invGuideCloseBtn');
   bindSimpleModal('invCaseHelpBtn', 'invCaseHelpModal', 'invCaseHelpCloseBtn');
   bindSimpleModal('invCctvHelpBtn', 'invCctvHelpModal', 'invCctvHelpCloseBtn');
@@ -747,10 +761,27 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   const noWitnessCheckbox = document.getElementById('invNoWitness');
+  const witnessPresenceRadios = Array.from(document.querySelectorAll('input[name="invWitnessPresence"]'));
+
   function refreshNoWitnessState() {
     const active = !!(noWitnessCheckbox && noWitnessCheckbox.checked);
     panel.classList.toggle('witness-none-active', active);
+    witnessPresenceRadios.forEach(radio => {
+      radio.checked = active ? radio.value === 'no' : radio.value === 'yes';
+      const label = radio.closest('.radio-pill');
+      if (label) label.classList.toggle('is-checked', radio.checked);
+    });
   }
+
+  witnessPresenceRadios.forEach(radio => {
+    radio.addEventListener('change', () => {
+      if (!radio.checked || !noWitnessCheckbox) return;
+      noWitnessCheckbox.checked = radio.value === 'no';
+      refreshNoWitnessState();
+      saveBaseData();
+    });
+  });
+
   if (noWitnessCheckbox) {
     noWitnessCheckbox.addEventListener('change', () => {
       refreshNoWitnessState();
@@ -868,11 +899,6 @@ document.addEventListener('DOMContentLoaded', () => {
       .join(', ');
   }
 
-  const DOC_VERDICT_META = {
-    recognized: { label: '인정 검토', icon: '✅', boxClass: 'doc-verdict-ok' },
-    unrecognized: { label: '불인정 검토', icon: '🚫', boxClass: 'doc-verdict-no' }
-  };
-
   // 불인정일 때 판단사유를 바탕으로 보험가입자의견서 별지 초안을 자동 생성합니다.
   function buildAppendixHtml(result) {
     if (result.verdict !== 'unrecognized') return '';
@@ -896,7 +922,6 @@ document.addEventListener('DOMContentLoaded', () => {
    */
   function renderDocPreview(result) {
     const b = result.base;
-    const meta = DOC_VERDICT_META[result.verdict];
     const orgStr = [b.invDivision, b.invDept, b.invTeam].filter(Boolean).join(' - ') || '-';
     const storeName = b.invStoreName || '-';
     const victimName = b.invVictimName || '-';
@@ -938,9 +963,6 @@ document.addEventListener('DOMContentLoaded', () => {
         <p class="doc-header-sub">사고 관리번호 : ${escapeHtml(getOrCreateCaseId())}</p>
       </div>
 
-      <div class="doc-verdict-banner ${meta.boxClass}">
-        <span>${meta.icon}</span><span>검토 결과 : ${meta.label}</span>
-      </div>
 
       <div class="doc-info-grid">
         <div class="doc-info-cell"><span class="doc-info-label">조직</span><span class="doc-info-value">${escapeHtml(orgStr)}</span></div>
@@ -952,12 +974,14 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="doc-info-cell"><span class="doc-info-label">면담자명</span><span class="doc-info-value">${escapeHtml(interviewerNames)}</span></div>
       </div>
 
-      <div class="doc-section">
-        <p class="doc-section-title">■ 판단 사유</p>
-        <ul class="doc-reason-list doc-editable" contenteditable="true">
-          ${result.reasons.map(r => `<li>${escapeHtml(r)}</li>`).join('')}
-        </ul>
-      </div>
+      ${result.verdict === 'recognized' ? `
+        <div class="doc-section">
+          <p class="doc-section-title">■ 판단 사유</p>
+          <ul class="doc-reason-list doc-editable" contenteditable="true">
+            ${result.reasons.map(r => `<li>${escapeHtml(r)}</li>`).join('')}
+          </ul>
+        </div>
+      ` : ''}
 
       <div class="doc-section">
         <p class="doc-section-title">■ 공유·보고 기록</p>
@@ -1004,14 +1028,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (title) title.textContent = '사고조사 결과 확인서';
 
     const verdict = preview.querySelector('.doc-verdict-banner');
-    if (verdict) {
-      if (result.verdict === 'unrecognized') {
-        verdict.className = 'doc-verdict-banner doc-verdict-no';
-        verdict.textContent = '검토 결과 : 불인정 검토';
-      } else {
-        verdict.remove();
-      }
-    }
+    if (verdict) verdict.remove();
 
     const cells = Array.from(preview.querySelectorAll('.doc-info-cell'));
     if (cells[4]) cells[4].remove();
@@ -1069,26 +1086,10 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function renderResult(result) {
-    const meta = VERDICT_META[result.verdict];
-    const classifyRows = result.classified.map((x, i) =>
-      `<li>면담 ${i + 1} (${escapeHtml(x.w.name) || '이름 미입력'}) — <strong>${x.c.label}</strong></li>`
-    ).join('');
+    // 상단의 인정/불인정 대형 판정 박스는 표시하지 않고 확인서만 보여줍니다.
+    const resultArea = document.getElementById('invResultArea');
+    if (resultArea) resultArea.innerHTML = '';
 
-    document.getElementById('invResultArea').innerHTML = `
-      <div class="judge-result-box ${meta.className}">
-        <div class="judge-result-icon">${meta.icon}</div>
-        <h3 class="judge-result-title">${meta.label}</h3>
-        <ul class="judge-reason-list">
-          ${result.reasons.map(r => `<li>${r}</li>`).join('')}
-        </ul>
-        ${classifyRows ? `<p class="field-label" style="text-align:left;">면담별 분류</p><ul class="judge-reason-list">${classifyRows}</ul>` : ''}
-      </div>
-    `;
-    if (result.verdict !== 'unrecognized') {
-      document.getElementById('invResultArea').innerHTML = '';
-    }
-
-    // 결과 종류와 무관하게 항상 정식 확인서 형태의 문서를 렌더링해 PDF/Teams로 남길 수 있게 함
     const docBox = document.getElementById('invDocBox');
     if (docBox) {
       renderDocPreview(result);
@@ -1108,12 +1109,13 @@ document.addEventListener('DOMContentLoaded', () => {
       if (body) body.scrollTo({ top: 0 });
     }
     setTimeout(() => {
-      const reason = document.querySelector('#invDocPreview .doc-reason-list');
-      if (!reason) return;
-      reason.classList.remove('reason-highlight');
-      void reason.offsetWidth;
-      reason.classList.add('reason-highlight');
-      setTimeout(() => reason.classList.remove('reason-highlight'), 2100);
+      const editableTargets = document.querySelectorAll('#invDocPreview .doc-reason-list, #invDocPreview .doc-appendix-box');
+      editableTargets.forEach(target => {
+        target.classList.remove('reason-highlight');
+        void target.offsetWidth;
+        target.classList.add('reason-highlight');
+      });
+      setTimeout(() => editableTargets.forEach(target => target.classList.remove('reason-highlight')), 6200);
     }, 350);
   }
 
@@ -1124,6 +1126,15 @@ document.addEventListener('DOMContentLoaded', () => {
       window.__pendingInvestigationResult = result;
       const guide = document.getElementById('invReviewGuideOverlay');
       if (guide) {
+        const title = document.getElementById('invReviewGuideTitle');
+        const message = document.getElementById('invReviewGuideMessage');
+        if (result.verdict === 'unrecognized') {
+          if (title) title.textContent = '불인정 사유 별지는 직접 수정할 수 있습니다.';
+          if (message) message.textContent = '결과 확인서에서 노란색으로 강조되는 불인정 사유 별지를 눌러, 실제 확인한 CCTV·근무영상·목격자 진술·보고기록에 맞게 수정한 후 제출해주세요.';
+        } else {
+          if (title) title.textContent = '판단 사유는 직접 수정할 수 있습니다.';
+          if (message) message.textContent = '결과 확인서에서 노란색으로 강조되는 판단 사유를 눌러, 실제 확인 내용과 다르면 제출 전에 수정해주세요.';
+        }
         guide.classList.add('visible');
         guide.setAttribute('aria-hidden', 'false');
         return;
@@ -1346,17 +1357,13 @@ document.addEventListener('DOMContentLoaded', () => {
       row(label, value);
     });
 
-    section('검토 결과');
-    ctx.fillStyle = result.verdict === 'recognized' ? '#15803d' : (result.verdict === 'unrecognized' ? '#E60012' : '#b45309');
-    ctx.font = `700 38px ${fontFamily}`;
-    ctx.fillText(meta.label || '-', margin + 12, y);
-    y += 62;
-
-    section('판단 사유');
-    (result.reasons && result.reasons.length ? result.reasons : ['판단 사유가 없습니다.']).forEach(reason => {
-      ensure(90);
-      paragraph(`- ${reason}`);
-    });
+    if (result.verdict === 'recognized') {
+      section('판단 사유');
+      (result.reasons && result.reasons.length ? result.reasons : ['판단 사유가 없습니다.']).forEach(reason => {
+        ensure(90);
+        paragraph(`- ${reason}`);
+      });
+    }
 
     section('문서 내용');
     docPreviewToPlainText().split(/\n+/).filter(Boolean).forEach(line => {
