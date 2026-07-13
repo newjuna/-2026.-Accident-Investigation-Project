@@ -29,7 +29,7 @@ const INV_CASE_ID_KEY = 'fieldGuide_investigation_caseId';
  * "Teams로 전송" 버튼이 실제로 동작합니다.
  * 비워두면 미리보기만 표시되고 실제 전송은 되지 않습니다.
  */
-const INV_TEAMS_ENDPOINT_URL = 'https://script.google.com/macros/s/AKfycbydVn65UnREx3NDqymqhRs7IcdoFbM-Qc-D9o478UjrzxTxFupLdVDtpujfdrsPCrs/exec'; // 예: 'https://script.google.com/macros/s/AKfycb.../exec' (새로 배포한 뒤 여기에 붙여넣기)
+const INV_TEAMS_ENDPOINT_URL = ''; // 예: 'https://script.google.com/macros/s/AKfycb.../exec' (새로 배포한 뒤 여기에 붙여넣기)
 
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -895,6 +895,32 @@ document.addEventListener('DOMContentLoaded', () => {
     btn.title = ready ? '생성된 PDF를 엽니다.' : 'PDF 링크를 확인하는 중입니다.';
   }
 
+  function updateSubmitOverlay(step, message, progress) {
+    const overlay = document.getElementById('submitOverlay');
+    const eyebrow = document.getElementById('submitEyebrow');
+    const title = document.getElementById('submitTitle');
+    const msg = document.getElementById('submitMessage');
+    const fill = document.getElementById('submitProgressFill');
+    const spinner = document.getElementById('submitSpinner');
+    const actions = document.getElementById('submitDoneActions');
+    if (!overlay) return;
+    overlay.classList.add('visible');
+    overlay.setAttribute('aria-hidden', 'false');
+    if (eyebrow) eyebrow.textContent = step || '전송 진행 중';
+    if (title) title.textContent = progress >= 100 ? '전송 완료' : '잠시만 기다려주세요';
+    if (msg) msg.textContent = message || '';
+    if (fill) fill.style.width = `${Math.max(5, Math.min(100, progress || 8))}%`;
+    if (spinner) spinner.classList.toggle('done', progress >= 100);
+    if (actions) actions.style.display = progress >= 100 ? 'flex' : 'none';
+  }
+
+  function hideSubmitOverlay() {
+    const overlay = document.getElementById('submitOverlay');
+    if (!overlay) return;
+    overlay.classList.remove('visible');
+    overlay.setAttribute('aria-hidden', 'true');
+  }
+
   function drawWrappedText(ctx, text, x, y, maxWidth, lineHeight) {
     const words = String(text || '').replace(/\s+/g, ' ').trim().split(' ');
     const lines = [];
@@ -1352,6 +1378,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (statusEl) {
       statusEl.textContent = `1/3 접수 정보를 전송 중입니다. 첨부 ${attachments.length}건 / ${bytesToSize(totalBytes)}`;
     }
+    updateSubmitOverlay('1/3 접수 정보 전송', `첨부 ${attachments.length}건 / ${bytesToSize(totalBytes)}\n전송 화면을 닫지 말고 잠시만 기다려주세요.`, 18);
     if (buttonEl) buttonEl.textContent = '⏳ 1/3 접수 중...';
     await postToEndpoint(Object.assign({}, basePayload, { action: 'startSubmission' }), 45000);
 
@@ -1360,6 +1387,10 @@ document.addEventListener('DOMContentLoaded', () => {
       if (statusEl) {
         statusEl.textContent = `2/3 캡처 업로드 중입니다. (${i + 1}/${attachments.length}, ${bytesToSize(dataUrlByteSize(att.dataUrl))})`;
       }
+      const uploadProgress = attachments.length
+        ? 25 + Math.round(((i + 1) / attachments.length) * 45)
+        : 70;
+      updateSubmitOverlay('2/3 캡처 업로드', `${i + 1}/${attachments.length}번째 캡처를 업로드 중입니다.\n${bytesToSize(dataUrlByteSize(att.dataUrl))}`, uploadProgress);
       if (buttonEl) buttonEl.textContent = `⏳ 2/3 첨부 ${i + 1}/${attachments.length}`;
       await postToEndpoint({
         action: 'uploadAttachment',
@@ -1375,8 +1406,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (statusEl) {
       statusEl.textContent = '3/3 서버에서 PDF를 만들고 전송 중입니다... (최대 60초)';
     }
+    updateSubmitOverlay('3/3 결과문서 생성', '서버에서 PDF를 만들고 최종 전송 중입니다.', 82);
     if (buttonEl) buttonEl.textContent = '⏳ 3/3 최종 전송 중...';
     await postToEndpoint(Object.assign({}, basePayload, { action: 'finalizeSubmission' }), 60000);
+    updateSubmitOverlay('결과 PDF 확인', '생성된 PDF 링크를 확인하는 중입니다.', 92);
     window.__lastDocumentLink = await waitForDocumentLink(payload.caseId, statusEl);
   }
 
@@ -1404,6 +1437,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       setSubmitLock(true);
       setTeamsModalState('sending');
+      updateSubmitOverlay('전송 준비', '안정적인 전송을 준비하고 있습니다.\n화면을 닫지 말고 기다려주세요.', 8);
 
       // 버튼/상태 문구가 먼저 화면에 그려진 뒤 전송을 시작합니다.
       waitForUiPaint()
@@ -1426,12 +1460,21 @@ document.addEventListener('DOMContentLoaded', () => {
           }
           // 서버에서 PDF를 만들기 때문에 휴대폰 공유 버튼은 로컬 PDF가 있을 때만 활성화됩니다.
           setTeamsModalState('done');
+          if (teamsModalEl) teamsModalEl.classList.remove('visible');
+          updateSubmitOverlay(
+            '전송 완료',
+            window.__lastDocumentLink
+              ? '결과보기를 눌러 생성된 PDF를 확인하고 저장할 수 있습니다.'
+              : '전송은 완료되었습니다. 전송 카드에서 결과문서 보기를 확인해주세요.',
+            100
+          );
         })
         .catch(err => {
           if (statusEl) {
             statusEl.textContent = '⚠ 전송에 실패했습니다(시간 초과 포함). 네트워크 상태를 확인한 뒤 다시 시도해주세요.';
             statusEl.className = 'teams-send-status teams-send-error';
           }
+          hideSubmitOverlay();
           if (getLastPdfBlob()) setTeamsModalState('done');
           else setTeamsModalState('pre');
         })
@@ -1474,6 +1517,27 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
       alert('PDF 링크를 아직 확인하지 못했습니다. 전송된 카드의 "결과문서 보기" 버튼에서 확인해주세요.');
+    });
+  }
+
+  const submitResultBtn = document.getElementById('submitResultBtn');
+  if (submitResultBtn) {
+    submitResultBtn.addEventListener('click', () => {
+      if (window.__lastDocumentLink) {
+        window.open(window.__lastDocumentLink, '_blank', 'noopener');
+        return;
+      }
+      alert('PDF 링크를 아직 확인하지 못했습니다. 전송된 카드의 "결과문서 보기" 버튼에서 확인해주세요.');
+    });
+  }
+
+  const submitHomeBtn = document.getElementById('submitHomeBtn');
+  if (submitHomeBtn) {
+    submitHomeBtn.addEventListener('click', () => {
+      hideSubmitOverlay();
+      const homeTarget = document.querySelector('.nav-menu-item[data-target="manual"]') ? 'manual' : 'investigation';
+      const homeBtn = document.querySelector(`.nav-menu-item[data-target="${homeTarget}"]`);
+      if (homeBtn) homeBtn.click();
     });
   }
 
