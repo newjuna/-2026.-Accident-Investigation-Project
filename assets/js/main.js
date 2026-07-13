@@ -49,16 +49,13 @@ document.addEventListener('DOMContentLoaded', () => {
     el.addEventListener('click', () => activateTab(el.dataset.goto));
   });
 
-  const headerSearchBtn = document.getElementById('headerSearchBtn');
-  if (headerSearchBtn) {
-    headerSearchBtn.addEventListener('click', () => activateTab('search'));
-  }
-
   // 최초 진입 시 URL 해시가 있으면 해당 탭 활성화
   const validTargets = Array.from(navMenuItems).map(b => b.dataset.target).concat(['search']);
   const initialHash = window.location.hash.replace('#', '');
   if (initialHash && validTargets.includes(initialHash)) {
     activateTab(initialHash);
+  } else {
+    activateTab('home');
   }
 
   /* ---------- 검색 (즉시대응·사고조사·경위서·휴업신청·FAQ 통합) ---------- */
