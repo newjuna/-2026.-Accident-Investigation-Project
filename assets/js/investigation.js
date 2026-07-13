@@ -29,7 +29,7 @@ const INV_CASE_ID_KEY = 'fieldGuide_investigation_caseId';
  * "Teams로 전송" 버튼이 실제로 동작합니다.
  * 비워두면 미리보기만 표시되고 실제 전송은 되지 않습니다.
  */
-const INV_TEAMS_ENDPOINT_URL = 'https://script.google.com/macros/s/AKfycbx6B1nFdMFf1VpW51dE6L_rdwxGsePS2wjgRkFxePR9Te52sOrt2yv6yjbMYOO0NpIw/exec'; // 예: 'https://script.google.com/macros/s/AKfycb.../exec' (새로 배포한 뒤 여기에 붙여넣기)
+const INV_TEAMS_ENDPOINT_URL = ''; // 예: 'https://script.google.com/macros/s/AKfycb.../exec' (새로 배포한 뒤 여기에 붙여넣기)
 
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -815,6 +815,76 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
+  function waitForUiPaint() {
+    return new Promise(resolve => {
+      requestAnimationFrame(() => requestAnimationFrame(resolve));
+    });
+  }
+
+  function resetLastPdf() {
+    window.__lastPdfBlob = null;
+  }
+
+  function getLastPdfBlob() {
+    return window.__lastPdfBlob instanceof Blob ? window.__lastPdfBlob : null;
+  }
+
+  function setSharePdfAvailability() {
+    const btn = document.getElementById('sharePdfBtn');
+    if (!btn) return;
+    const ready = !!getLastPdfBlob();
+    btn.disabled = !ready;
+    btn.title = ready ? '' : 'PDF 생성이 완료된 뒤 공유할 수 있습니다.';
+  }
+
+  function createTextFallbackPdf() {
+    if (typeof window.jspdf === 'undefined') return null;
+
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+    const result = window.__investigationResult || computeJudgement();
+    const b = result.base || {};
+    const meta = VERDICT_META[result.verdict] || { label: result.verdict || '-' };
+    const lines = [
+      '사고조사 결과 문서',
+      '',
+      `사고관리번호: ${getOrCreateCaseId()}`,
+      `조직: ${[b.invDivision, b.invDept, b.invTeam].filter(Boolean).join(' - ') || '-'}`,
+      `매장명: ${b.invStoreName || '-'}`,
+      `재해자: ${b.invVictimName || '-'}`,
+      `사고일시: ${(b.invIncidentDate || '-')} ${(b.invIncidentTime || '')}`,
+      `사고장소: ${b.invIncidentPlace || '-'}`,
+      `작성자: ${b.invAuthorName || '-'}`,
+      `검토결과: ${meta.label}`,
+      '',
+      '판단 사유',
+      ...((result.reasons || []).map(r => `- ${r}`)),
+      '',
+      '문서 내용',
+      docPreviewToPlainText()
+    ];
+
+    pdf.setFont('helvetica', 'normal');
+    pdf.setFontSize(11);
+    let y = 14;
+    lines.forEach(line => {
+      const wrapped = pdf.splitTextToSize(String(line || ' '), 180);
+      wrapped.forEach(part => {
+        if (y > 285) {
+          pdf.addPage();
+          y = 14;
+        }
+        pdf.text(part, 15, y);
+        y += 6;
+      });
+    });
+
+    const rawUri = pdf.output('datauristring');
+    const base64Part = rawUri.split(',').pop();
+    window.__lastPdfBlob = pdf.output('blob');
+    return 'data:application/pdf;base64,' + base64Part;
+  }
+
   // 화면에 보이는 결과문서(#invDocPreview)를 실제 PDF 파일(base64)로 만듭니다.
   // (html2canvas로 이미지를 찍은 뒤 jsPDF로 PDF에 붙여넣는 방식 — 둘 다 로드 안 됐거나
   //  실패/시간초과 시에도 전송 자체는 계속되도록 방어합니다)
@@ -824,9 +894,13 @@ document.addEventListener('DOMContentLoaded', () => {
   // 이미 별도 파일로 Drive에 저장되므로, 문서 캡처 시에는 잠깐 숨겨서
   // 문서(글자·표) 부분만 가볍게 캡처합니다.
   function buildDocumentPdf() {
+    resetLastPdf();
     const preview = document.getElementById('invDocPreview');
-    if (!preview || typeof html2canvas === 'undefined' || typeof window.jspdf === 'undefined') {
+    if (!preview || typeof window.jspdf === 'undefined') {
       return Promise.resolve(null);
+    }
+    if (typeof html2canvas === 'undefined') {
+      return Promise.resolve(createTextFallbackPdf());
     }
 
     const attachGrid = preview.querySelector('.doc-attach-grid');
@@ -863,8 +937,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (attachSection && prevDisplay !== null) attachSection.style.display = prevDisplay;
       });
 
-    // 모바일에서 캡처가 멈추더라도 8초 뒤에는 포기하고 전송을 계속 진행합니다.
-    return withTimeout(capturePromise, 8000);
+    // 모바일에서 캡처가 멈추더라도 12초 뒤에는 가벼운 텍스트 PDF로 대체합니다.
+    return withTimeout(capturePromise, 12000)
+      .then(docDataUri => docDataUri || createTextFallbackPdf());
   }
 
   function buildAttachmentPayload(b) {
@@ -982,6 +1057,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (postRow) postRow.style.display = 'flex';
       if (homeRow) homeRow.style.display = 'flex';
     }
+    setSharePdfAvailability();
   }
 
   const invTeamsBtn = document.getElementById('invTeamsBtn');
@@ -1031,40 +1107,58 @@ document.addEventListener('DOMContentLoaded', () => {
       }
 
       // 로딩 상태를 눈에 보이게 표시 (버튼 문구 변경 + 비활성화)
+      resetLastPdf();
+      setSharePdfAvailability();
       sendTeamsNowBtn.disabled = true;
       sendTeamsNowBtn.textContent = '⏳ 결과문서 PDF 생성 중...';
       if (statusEl) {
-        statusEl.textContent = '결과문서 PDF를 만들고 전송하는 중입니다. 잠시만 기다려주세요... (최대 8초)';
+        statusEl.textContent = '결과문서 PDF를 만들고 있습니다. 잠시만 기다려주세요...';
         statusEl.className = 'teams-send-status';
       }
 
-      // "전송하기"를 누른 시점에만 무거운 캡처 작업을 시작합니다.
-      buildTeamsPayload()
+      // 버튼/상태 문구가 먼저 화면에 그려진 뒤 무거운 PDF 작업을 시작합니다.
+      waitForUiPaint()
+        .then(() => buildTeamsPayload())
         .then(payload => {
+          const hasDocumentPdf = (payload.attachments || []).some(att => att.isDocument);
+          if (!hasDocumentPdf || !getLastPdfBlob()) {
+            throw new Error('PDF_NOT_CREATED');
+          }
           sendTeamsNowBtn.textContent = '⏳ 전송 중... (최대 20초)';
           if (statusEl) statusEl.textContent = '전송 중입니다. 잠시만 기다려주세요... (최대 20초)';
           // 서버 응답이 20초 넘게 없으면 강제로 실패 처리해 화면이 멈추지 않게 합니다.
           return fetchWithTimeout(INV_TEAMS_ENDPOINT_URL, {
             method: 'POST',
+            mode: 'no-cors',
             headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // Apps Script와의 호환을 위해 text/plain 사용
             body: JSON.stringify(payload)
           }, 20000);
         })
-        .then(res => res.json())
+        .then(res => {
+          if (res && res.type === 'opaque') {
+            return { ok: true, opaque: true };
+          }
+          return res.json();
+        })
         .then(data => {
           if (statusEl) {
-            statusEl.textContent = data.ok ? '✅ 전송 완료되었습니다.' : '⚠ 전송은 되었으나 일부 처리에 문제가 있었습니다.';
+            statusEl.textContent = data.opaque
+              ? '✅ 전송 요청을 완료했습니다. Teams 도착 여부를 확인해주세요.'
+              : (data.ok ? '✅ 전송 완료되었습니다.' : '⚠ 전송은 되었으나 일부 처리에 문제가 있었습니다.');
             statusEl.className = 'teams-send-status ' + (data.ok ? 'teams-send-ok' : 'teams-send-error');
           }
           // 성공/실패 여부와 무관하게 PDF 생성 자체는 끝났으므로, 공유하기 버튼을 쓸 수 있게 전환
           setTeamsModalState('done');
         })
-        .catch(() => {
+        .catch(err => {
           if (statusEl) {
-            statusEl.textContent = '⚠ 전송에 실패했습니다(시간 초과 포함). 네트워크 상태를 확인한 뒤 다시 시도하거나 PDF를 직접 공유해주세요.';
+            statusEl.textContent = err && err.message === 'PDF_NOT_CREATED'
+              ? '⚠ PDF를 만들지 못해 전송하지 않았습니다. 네트워크 상태를 확인한 뒤 다시 시도해주세요.'
+              : '⚠ 전송에 실패했습니다(시간 초과 포함). 네트워크 상태를 확인한 뒤 다시 시도하거나 PDF를 직접 공유해주세요.';
             statusEl.className = 'teams-send-status teams-send-error';
           }
-          setTeamsModalState('done');
+          if (getLastPdfBlob()) setTeamsModalState('done');
+          else setTeamsModalState('pre');
         })
         .finally(() => {
           sendTeamsNowBtn.disabled = false;
@@ -1096,7 +1190,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const sharePdfBtn = document.getElementById('sharePdfBtn');
   if (sharePdfBtn) {
     sharePdfBtn.addEventListener('click', () => {
-      const blob = window.__lastPdfBlob;
+      const blob = getLastPdfBlob();
       if (!blob) {
         alert('공유할 PDF가 없습니다. "전송하기"를 먼저 눌러 PDF를 생성해주세요.');
         return;
