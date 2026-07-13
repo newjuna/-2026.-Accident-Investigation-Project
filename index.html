@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>사고 발생 현장 대응 가이드 | 안전보건팀</title>
-<link rel="stylesheet" href="assets/css/style.css?v=gpt-v1-16">
+<link rel="stylesheet" href="assets/css/style.css?v=gpt-v1-18">
 <!-- 결과 문서 서명란에 사용하는 손글씨 느낌 폰트 (Google Fonts) -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Nanum+Pen+Script&display=swap" rel="stylesheet">
@@ -122,8 +122,10 @@
     <button class="nav-close-btn" id="navCloseBtn" type="button" aria-label="메뉴 닫기">✕</button>
   </div>
   <ul class="nav-menu">
-    <li><button class="nav-menu-item active" data-target="manual"><span class="nav-menu-icon">📖</span>매뉴얼</button></li>
+    <li><button class="nav-menu-item active" data-target="home"><span class="nav-menu-icon">🏠</span>메인</button></li>
     <li><button class="nav-menu-item" data-target="investigation"><span class="nav-menu-icon">🔎</span>사고조사</button></li>
+    <li><button class="nav-menu-item" data-target="manual"><span class="nav-menu-icon">📖</span>매뉴얼</button></li>
+    <li><button class="nav-menu-item" data-target="search"><span class="nav-menu-icon">🔍</span>검색</button></li>
   </ul>
   <div class="nav-sidebar-footer">
     <p>안전보건팀 · 사고 발생 현장 대응 가이드</p>
@@ -132,6 +134,44 @@
 
 <!-- 탭 콘텐츠 -->
 <main class="app-main">
+
+  <!-- TAB: 메인 선택 화면 -->
+  <section class="tab-panel active" id="panel-home" data-panel="home">
+    <div class="home-hero">
+      <p class="home-eyebrow">DAISO SAFETY</p>
+      <h2>무엇을 확인하시겠어요?</h2>
+      <p>필요한 메뉴를 선택해주세요.</p>
+    </div>
+
+    <div class="home-menu-grid">
+      <button type="button" class="home-menu-card home-menu-investigation" data-goto="investigation">
+        <span class="home-menu-icon">🔎</span>
+        <span class="home-menu-text">
+          <strong>사고조사</strong>
+          <small>CCTV·공유기록·목격자 면담 및 결과 확인</small>
+        </span>
+        <span class="home-menu-arrow">→</span>
+      </button>
+
+      <button type="button" class="home-menu-card home-menu-manual" data-goto="manual">
+        <span class="home-menu-icon">📖</span>
+        <span class="home-menu-text">
+          <strong>매뉴얼</strong>
+          <small>사고 대응 절차와 실무 기준 확인</small>
+        </span>
+        <span class="home-menu-arrow">→</span>
+      </button>
+
+      <button type="button" class="home-menu-card home-menu-search" data-goto="search">
+        <span class="home-menu-icon">🔍</span>
+        <span class="home-menu-text">
+          <strong>검색</strong>
+          <small>필요한 사고 대응 내용을 빠르게 검색</small>
+        </span>
+        <span class="home-menu-arrow">→</span>
+      </button>
+    </div>
+  </section>
 
   <!-- TAB: 사고조사 (확인자료 체크 + 목격자 면담 + 판단 + 불인정 시 PDF/문구까지 한 화면) -->
   <section class="tab-panel" id="panel-investigation" data-panel="investigation">
@@ -417,16 +457,11 @@
   </div>
 
   <!-- TAB: 매뉴얼 (신규매뉴얼_HTML 콘텐츠를 모바일 최적화 + 검색 기능으로 통합) -->
-  <section class="tab-panel active" id="panel-manual" data-panel="manual">
+  <section class="tab-panel" id="panel-manual" data-panel="manual">
 
     <div class="panel-intro">
       <h2>사고 대응 매뉴얼</h2>
       <p>필요한 내용만 검색해서 보거나, 아래 챕터 탭에서 골라 확인하세요.</p>
-    </div>
-
-    <div class="action-card action-card-highlight" style="margin-bottom:16px;">
-      <p class="action-card-desc" style="margin:0 0 10px;">실제 사고가 발생했다면, 매뉴얼을 참고하면서 <strong>"사고조사"</strong> 탭에서 CCTV·목격자 면담·결과 문서 작성을 진행하세요.</p>
-      <button class="goto-tab-btn" data-goto="investigation">사고조사로 이동 →</button>
     </div>
 
     <div class="man-search-wrap">
@@ -1323,13 +1358,13 @@
 <!-- 결과 문서를 실제 PDF 파일로 만들어 Teams 카드용 첨부파일을 만들기 위한 라이브러리 (오픈소스, MIT 라이선스) -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="assets/js/search-data.js?v=gpt-v1-16"></script>
-<script src="assets/js/faq-data.js?v=gpt-v1-16"></script>
-<script src="assets/js/org-data.js?v=gpt-v1-16"></script>
-<script src="assets/js/investigation.js?v=gpt-v1-16"></script>
-<script src="assets/js/auth.js?v=gpt-v1-16"></script>
-<script src="assets/js/manual.js?v=gpt-v1-16"></script>
-<script src="assets/js/main.js?v=gpt-v1-16"></script>
+<script src="assets/js/search-data.js?v=gpt-v1-18"></script>
+<script src="assets/js/faq-data.js?v=gpt-v1-18"></script>
+<script src="assets/js/org-data.js?v=gpt-v1-18"></script>
+<script src="assets/js/investigation.js?v=gpt-v1-18"></script>
+<script src="assets/js/auth.js?v=gpt-v1-18"></script>
+<script src="assets/js/manual.js?v=gpt-v1-18"></script>
+<script src="assets/js/main.js?v=gpt-v1-18"></script>
 </body>
 </html>
 
