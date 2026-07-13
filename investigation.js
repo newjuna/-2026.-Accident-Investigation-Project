@@ -1110,29 +1110,15 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   /**
-   * Teams/시트로 보낼 전체 payload를 만듭니다. 결과문서 이미지 캡처가 끝난 뒤
-   * 완성되므로 Promise를 반환합니다. (캡처 실패해도 나머지 데이터는 정상 전송)
-   * → "전송하기"를 누른 시점에만 호출되어, 모달을 여는 동작 자체는 가볍게 유지됩니다.
+   * Teams/시트로 보낼 전체 payload를 만듭니다.
+   * 휴대폰 PDF 생성 실패가 반복되어 전송 자체를 막지 않도록, 결과문서 PDF는
+   * Apps Script 서버에서 payload.document 기반으로 생성합니다.
    */
   function buildTeamsPayload() {
     const result = window.__investigationResult || computeJudgement();
     const payload = buildPayloadBase(result);
-    const b = result.base;
-
-    return buildDocumentPdf().then(docDataUri => {
-      if (docDataUri) {
-        const dateStr = (b.invIncidentDate || '').replace(/-/g, '') || 'unknown';
-        const storeStr = (b.invStoreName || '매장').replace(/[\\/:*?"<>|]/g, '');
-        const authorStr = (b.invAuthorName || '작성자').replace(/[\\/:*?"<>|]/g, '');
-        // 결과문서 PDF는 맨 앞에 isDocument 표시를 붙여 추가 (Teams 카드의 "결과문서 보기" 버튼용)
-        payload.attachments.unshift({
-          fileName: `${dateStr}_${storeStr}_${authorStr}_결과문서.pdf`,
-          dataUrl: docDataUri,
-          isDocument: true
-        });
-      }
-      return payload;
-    });
+    payload.serverShouldCreatePdf = true;
+    return Promise.resolve(payload);
   }
 
   // payload 미리보기용 요약 텍스트를 만듭니다. (이미지 base64는 절대 넣지 않음 —
@@ -1147,7 +1133,8 @@ document.addEventListener('DOMContentLoaded', () => {
       `작성자 : ${payload.author || '-'}`,
       `면담자명 : ${payload.interviewerNames || '-'}`,
       `검토결과 : ${payload.verdict}`,
-      `첨부파일 : ${attachCount}건 (결과문서 PDF 포함)`,
+      `첨부파일 : ${attachCount}건`,
+      '결과문서 PDF : 서버에서 생성 후 Teams 카드에 링크로 첨부',
       '',
       '판단 사유',
       ...(payload.reasons || []).map(r => '- ' + r)
@@ -1188,7 +1175,7 @@ document.addEventListener('DOMContentLoaded', () => {
       setTeamsModalState('pre');
       if (noteEl) {
         noteEl.textContent = INV_TEAMS_ENDPOINT_URL
-          ? '"전송하기"를 누르면 결과문서 PDF를 만들어 Teams 채널·개인 쪽지에 게시하고 기록을 저장합니다. (PDF 생성에 몇 초 걸릴 수 있습니다)'
+          ? '"전송하기"를 누르면 서버에서 결과문서 PDF를 만들어 Teams 채널·개인 쪽지에 링크로 게시하고 기록을 저장합니다.'
           : '전송 연동 주소가 아직 설정되지 않아 미리보기만 가능합니다. (assets/js/investigation.js 상단의 INV_TEAMS_ENDPOINT_URL 값을 설정하세요)';
       }
       if (modal) modal.classList.add('visible');
@@ -1221,23 +1208,20 @@ document.addEventListener('DOMContentLoaded', () => {
       resetLastPdf();
       setSharePdfAvailability();
       sendTeamsNowBtn.disabled = true;
-      sendTeamsNowBtn.textContent = '⏳ 결과문서 PDF 생성 중...';
+      sendTeamsNowBtn.textContent = '⏳ 전송 준비 중...';
       if (statusEl) {
-        statusEl.textContent = '결과문서 PDF를 만들고 있습니다. 잠시만 기다려주세요... (최대 20초)';
+        statusEl.textContent = '휴대폰에서는 PDF를 만들지 않고, 서버에서 결과문서 PDF를 생성합니다.';
         statusEl.className = 'teams-send-status';
       }
 
-      // 버튼/상태 문구가 먼저 화면에 그려진 뒤 무거운 PDF 작업을 시작합니다.
+      // 버튼/상태 문구가 먼저 화면에 그려진 뒤 전송을 시작합니다.
       waitForUiPaint()
         .then(() => buildTeamsPayload())
         .then(payload => {
-          const hasDocumentPdf = (payload.attachments || []).some(att => att.isDocument);
-          if (!hasDocumentPdf || !getLastPdfBlob()) {
-            throw new Error('PDF_NOT_CREATED');
-          }
           sendTeamsNowBtn.textContent = '⏳ 전송 중... (최대 60초)';
-          if (statusEl) statusEl.textContent = 'PDF와 사고조사 내용을 전송 중입니다. 잠시만 기다려주세요... (최대 60초)';
-          // 첨부 PDF 저장과 Teams 전송이 같이 일어나므로 모바일에서는 시간이 걸릴 수 있습니다.
+          if (statusEl) {
+            statusEl.textContent = '사고조사 내용을 전송 중입니다. 서버에서 결과문서 PDF를 만들어 Teams 링크로 첨부합니다... (최대 60초)';
+          }
           return fetchWithTimeout(INV_TEAMS_ENDPOINT_URL, {
             method: 'POST',
             mode: 'no-cors',
@@ -1258,14 +1242,12 @@ document.addEventListener('DOMContentLoaded', () => {
               : (data.ok ? '✅ 전송 완료되었습니다.' : '⚠ 전송은 되었으나 일부 처리에 문제가 있었습니다.');
             statusEl.className = 'teams-send-status ' + (data.ok ? 'teams-send-ok' : 'teams-send-error');
           }
-          // 성공/실패 여부와 무관하게 PDF 생성 자체는 끝났으므로, 공유하기 버튼을 쓸 수 있게 전환
+          // 서버에서 PDF를 만들기 때문에 휴대폰 공유 버튼은 로컬 PDF가 있을 때만 활성화됩니다.
           setTeamsModalState('done');
         })
         .catch(err => {
           if (statusEl) {
-            statusEl.textContent = err && err.message === 'PDF_NOT_CREATED'
-              ? '⚠ PDF를 만들지 못해 전송하지 않았습니다. 네트워크 상태를 확인한 뒤 다시 시도해주세요.'
-              : '⚠ 전송에 실패했습니다(시간 초과 포함). 네트워크 상태를 확인한 뒤 다시 시도하거나 PDF를 직접 공유해주세요.';
+            statusEl.textContent = '⚠ 전송에 실패했습니다(시간 초과 포함). 네트워크 상태를 확인한 뒤 다시 시도해주세요.';
             statusEl.className = 'teams-send-status teams-send-error';
           }
           if (getLastPdfBlob()) setTeamsModalState('done');
