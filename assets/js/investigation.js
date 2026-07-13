@@ -29,7 +29,7 @@ const INV_CASE_ID_KEY = 'fieldGuide_investigation_caseId';
  * "Teams로 전송" 버튼이 실제로 동작합니다.
  * 비워두면 미리보기만 표시되고 실제 전송은 되지 않습니다.
  */
-const INV_TEAMS_ENDPOINT_URL = 'https://script.google.com/macros/s/AKfycbwXW__5FFDQSYV7Rq5s_bJ5NaKnc6f5abUbk8kytzby54nnKJnLvf2K4wRar8mhTL-X/exec'; // 예: 'https://script.google.com/macros/s/AKfycb.../exec' (새로 배포한 뒤 여기에 붙여넣기)
+const INV_TEAMS_ENDPOINT_URL = ''; // 예: 'https://script.google.com/macros/s/AKfycb.../exec' (새로 배포한 뒤 여기에 붙여넣기)
 
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -837,57 +837,8 @@ document.addEventListener('DOMContentLoaded', () => {
     btn.title = ready ? '' : 'PDF 생성이 완료된 뒤 공유할 수 있습니다.';
   }
 
-  function createTextFallbackPdf() {
-    if (typeof window.jspdf === 'undefined') return null;
-
-    const { jsPDF } = window.jspdf;
-    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-    const result = window.__investigationResult || computeJudgement();
-    const b = result.base || {};
-    const meta = VERDICT_META[result.verdict] || { label: result.verdict || '-' };
-    const lines = [
-      '사고조사 결과 문서',
-      '',
-      `사고관리번호: ${getOrCreateCaseId()}`,
-      `조직: ${[b.invDivision, b.invDept, b.invTeam].filter(Boolean).join(' - ') || '-'}`,
-      `매장명: ${b.invStoreName || '-'}`,
-      `재해자: ${b.invVictimName || '-'}`,
-      `사고일시: ${(b.invIncidentDate || '-')} ${(b.invIncidentTime || '')}`,
-      `사고장소: ${b.invIncidentPlace || '-'}`,
-      `작성자: ${b.invAuthorName || '-'}`,
-      `검토결과: ${meta.label}`,
-      '',
-      '판단 사유',
-      ...((result.reasons || []).map(r => `- ${r}`)),
-      '',
-      '문서 내용',
-      docPreviewToPlainText()
-    ];
-
-    pdf.setFont('helvetica', 'normal');
-    pdf.setFontSize(11);
-    let y = 14;
-    lines.forEach(line => {
-      const wrapped = pdf.splitTextToSize(String(line || ' '), 180);
-      wrapped.forEach(part => {
-        if (y > 285) {
-          pdf.addPage();
-          y = 14;
-        }
-        pdf.text(part, 15, y);
-        y += 6;
-      });
-    });
-
-    const rawUri = pdf.output('datauristring');
-    const base64Part = rawUri.split(',').pop();
-    window.__lastPdfBlob = pdf.output('blob');
-    return 'data:application/pdf;base64,' + base64Part;
-  }
-
   // 화면에 보이는 결과문서(#invDocPreview)를 실제 PDF 파일(base64)로 만듭니다.
-  // (html2canvas로 이미지를 찍은 뒤 jsPDF로 PDF에 붙여넣는 방식 — 둘 다 로드 안 됐거나
-  //  실패/시간초과 시에도 전송 자체는 계속되도록 방어합니다)
+  // (html2canvas로 이미지를 찍은 뒤 jsPDF A4 여러 페이지에 나눠 붙입니다)
   //
   // [성능 주의] 캡처 안에 카톡·팀즈 첨부 원본 사진(고해상도)까지 포함하면
   // 캡처 용량이 커져 휴대폰에서 화면이 멈춘 것처럼 느려집니다. 그 사진들은
@@ -896,11 +847,8 @@ document.addEventListener('DOMContentLoaded', () => {
   function buildDocumentPdf() {
     resetLastPdf();
     const preview = document.getElementById('invDocPreview');
-    if (!preview || typeof window.jspdf === 'undefined') {
+    if (!preview || typeof html2canvas === 'undefined' || typeof window.jspdf === 'undefined') {
       return Promise.resolve(null);
-    }
-    if (typeof html2canvas === 'undefined') {
-      return Promise.resolve(createTextFallbackPdf());
     }
 
     const attachGrid = preview.querySelector('.doc-attach-grid');
@@ -909,19 +857,29 @@ document.addEventListener('DOMContentLoaded', () => {
     if (attachSection) attachSection.style.display = 'none';
 
     const capturePromise = new Promise(resolve => setTimeout(resolve, 50))
-      .then(() => html2canvas(preview, { scale: 1.3, backgroundColor: '#ffffff', logging: false }))
+      .then(() => html2canvas(preview, { scale: 1.1, backgroundColor: '#ffffff', logging: false }))
       .then(canvas => {
         const { jsPDF } = window.jspdf;
-        const imgData = canvas.toDataURL('image/jpeg', 0.85);
-        // 캔버스 비율에 맞춰 A4 폭(210mm) 기준으로 PDF 페이지 크기를 잡습니다.
+        const imgData = canvas.toDataURL('image/jpeg', 0.78);
+        // 카톡/Teams에서 길쭉한 사용자 정의 PDF가 깨져 보이는 경우가 있어,
+        // 표준 A4 페이지 여러 장으로 나눠 생성합니다.
+        const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
         const pageWidthMm = 210;
-        const pageHeightMm = (canvas.height * pageWidthMm) / canvas.width;
-        const pdf = new jsPDF({
-          orientation: pageHeightMm > pageWidthMm ? 'portrait' : 'landscape',
-          unit: 'mm',
-          format: [pageWidthMm, pageHeightMm]
-        });
-        pdf.addImage(imgData, 'JPEG', 0, 0, pageWidthMm, pageHeightMm);
+        const pageHeightMm = 297;
+        const imgHeightMm = (canvas.height * pageWidthMm) / canvas.width;
+        let y = 0;
+        let remainingHeight = imgHeightMm;
+
+        pdf.addImage(imgData, 'JPEG', 0, y, pageWidthMm, imgHeightMm);
+        remainingHeight -= pageHeightMm;
+
+        while (remainingHeight > 0) {
+          pdf.addPage();
+          y -= pageHeightMm;
+          pdf.addImage(imgData, 'JPEG', 0, y, pageWidthMm, imgHeightMm);
+          remainingHeight -= pageHeightMm;
+        }
+
         // jsPDF의 datauristring은 "data:application/pdf;filename=...;base64,..." 형태로
         // 중간에 filename 항목이 끼어있어, 서버(Code.gs)가 기대하는
         // 표준 "data:application/pdf;base64,..." 형태로 정리합니다.
@@ -937,9 +895,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (attachSection && prevDisplay !== null) attachSection.style.display = prevDisplay;
       });
 
-    // 모바일에서 캡처가 멈추더라도 12초 뒤에는 가벼운 텍스트 PDF로 대체합니다.
-    return withTimeout(capturePromise, 12000)
-      .then(docDataUri => docDataUri || createTextFallbackPdf());
+    // 모바일에서 캡처가 멈추면 깨진 대체 PDF를 만들지 않고 실패로 안내합니다.
+    return withTimeout(capturePromise, 20000);
   }
 
   function buildAttachmentPayload(b) {
@@ -1112,7 +1069,7 @@ document.addEventListener('DOMContentLoaded', () => {
       sendTeamsNowBtn.disabled = true;
       sendTeamsNowBtn.textContent = '⏳ 결과문서 PDF 생성 중...';
       if (statusEl) {
-        statusEl.textContent = '결과문서 PDF를 만들고 있습니다. 잠시만 기다려주세요...';
+        statusEl.textContent = '결과문서 PDF를 만들고 있습니다. 잠시만 기다려주세요... (최대 20초)';
         statusEl.className = 'teams-send-status';
       }
 
@@ -1124,15 +1081,15 @@ document.addEventListener('DOMContentLoaded', () => {
           if (!hasDocumentPdf || !getLastPdfBlob()) {
             throw new Error('PDF_NOT_CREATED');
           }
-          sendTeamsNowBtn.textContent = '⏳ 전송 중... (최대 20초)';
-          if (statusEl) statusEl.textContent = '전송 중입니다. 잠시만 기다려주세요... (최대 20초)';
-          // 서버 응답이 20초 넘게 없으면 강제로 실패 처리해 화면이 멈추지 않게 합니다.
+          sendTeamsNowBtn.textContent = '⏳ 전송 중... (최대 60초)';
+          if (statusEl) statusEl.textContent = 'PDF와 사고조사 내용을 전송 중입니다. 잠시만 기다려주세요... (최대 60초)';
+          // 첨부 PDF 저장과 Teams 전송이 같이 일어나므로 모바일에서는 시간이 걸릴 수 있습니다.
           return fetchWithTimeout(INV_TEAMS_ENDPOINT_URL, {
             method: 'POST',
             mode: 'no-cors',
             headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // Apps Script와의 호환을 위해 text/plain 사용
             body: JSON.stringify(payload)
-          }, 20000);
+          }, 60000);
         })
         .then(res => {
           if (res && res.type === 'opaque') {
