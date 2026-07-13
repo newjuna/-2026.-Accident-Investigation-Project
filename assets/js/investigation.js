@@ -29,7 +29,7 @@ const INV_CASE_ID_KEY = 'fieldGuide_investigation_caseId';
  * "Teams로 전송" 버튼이 실제로 동작합니다.
  * 비워두면 미리보기만 표시되고 실제 전송은 되지 않습니다.
  */
-const INV_TEAMS_ENDPOINT_URL = 'https://script.google.com/macros/s/AKfycbx8rgKwOcD1WT_Bzbo7lC4qmTxGZMm5mglHhrvamEeg_EKIegAcsU4l9VGgevwtBWwd/exec'; // 예: 'https://script.google.com/macros/s/AKfycb.../exec' (새로 배포한 뒤 여기에 붙여넣기)
+const INV_TEAMS_ENDPOINT_URL = 'https://script.google.com/macros/s/AKfycbwqs6GENHKnNujQQX1AHDeapL3pyFszShp5bJ3usOqRgrqSs54LHMoGXWRVi_o5pXVJ/exec'; // 예: 'https://script.google.com/macros/s/AKfycb.../exec' (새로 배포한 뒤 여기에 붙여넣기)
 
 document.addEventListener('DOMContentLoaded', () => {
 
