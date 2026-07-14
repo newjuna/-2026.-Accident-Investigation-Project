@@ -3,8 +3,52 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const panels = document.querySelectorAll('.tab-panel');
   const navMenuItems = document.querySelectorAll('.nav-menu-item');
+  const guideOverlay = document.getElementById('guideOverlay');
+  const guideCloseBtn = document.getElementById('guideCloseBtn');
+  const guideUpdateBtn = document.getElementById('guideUpdateBtn');
+  let guideTimers = [];
 
-  function activateTab(target) {
+  function resetGuidePopup() {
+    guideTimers.forEach(clearTimeout);
+    guideTimers = [];
+    ['gStep0','gStep1','gStep2','gStep3'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.classList.add('guide-step-hidden');
+        el.classList.remove('guide-step-visible');
+      }
+    });
+    if (guideCloseBtn) guideCloseBtn.disabled = true;
+    if (guideUpdateBtn) guideUpdateBtn.disabled = true;
+  }
+
+  function showManualGuidePopup() {
+    if (!guideOverlay) return;
+    resetGuidePopup();
+    guideOverlay.style.display = 'flex';
+    ['gStep0','gStep1','gStep2','gStep3'].forEach((id, i, arr) => {
+      guideTimers.push(setTimeout(() => {
+        const el = document.getElementById(id);
+        if (el) {
+          el.classList.remove('guide-step-hidden');
+          el.classList.add('guide-step-visible');
+        }
+        if (i === arr.length - 1) {
+          if (guideCloseBtn) guideCloseBtn.disabled = false;
+          if (guideUpdateBtn) guideUpdateBtn.disabled = false;
+        }
+      }, 250 + 350 * (i + 1)));
+    });
+  }
+
+  function closeManualGuidePopup() {
+    if (guideOverlay) guideOverlay.style.display = 'none';
+    guideTimers.forEach(clearTimeout);
+    guideTimers = [];
+  }
+
+
+  function activateTab(target, options = {}) {
     navMenuItems.forEach(btn => {
       btn.classList.toggle('active', btn.dataset.target === target);
     });
@@ -17,6 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.scrollTo({ top: 0 });
     // 상태를 URL 해시에 반영 (뒤로가기/새로고침 대응)
     history.replaceState(null, '', '#' + target);
+    if (target === 'manual' && !options.skipManualGuide) showManualGuidePopup();
   }
 
   /* ---------- 우측 사이드바 내비게이션 열기/닫기 ---------- */
@@ -47,6 +92,16 @@ document.addEventListener('DOMContentLoaded', () => {
   // 탭 바에 없는 화면 등으로 이동하는 버튼 (예: 안내 카드의 바로가기 버튼)
   document.querySelectorAll('[data-goto]').forEach(el => {
     el.addEventListener('click', () => activateTab(el.dataset.goto));
+  });
+
+  if (guideCloseBtn) guideCloseBtn.addEventListener('click', closeManualGuidePopup);
+  if (guideUpdateBtn) guideUpdateBtn.addEventListener('click', () => {
+    closeManualGuidePopup();
+    activateTab('manual', { skipManualGuide: true });
+    setTimeout(() => {
+      const target = document.getElementById('update2026');
+      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }, 80);
   });
 
   // 최초 진입 시 URL 해시가 있으면 해당 탭 활성화
