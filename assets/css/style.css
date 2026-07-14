@@ -3401,3 +3401,56 @@ button {
   .inv-conflict-topbar { padding-top: 6px; }
   .inv-conflict-box { padding-top: 10px; }
 }
+
+/* ===== GPT V1.34 : 면담 선택지 최소화 + 누락 항목 시각 안내 ===== */
+.witness-choice-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.witness-choice-copy b {
+  color: inherit;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1.35;
+}
+.witness-choice-copy small {
+  color: #98a2b3;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+.witness-choice:has(input:checked) .witness-choice-copy small { color: #b66a70; }
+.witness-optional-note {
+  margin-bottom: 12px;
+  padding: 13px 14px;
+  border-radius: 12px;
+  background: #f7f8fa;
+  color: #667085;
+  font-size: 13px;
+  line-height: 1.55;
+}
+.witness-optional-note strong { color: #475467; font-weight: 800; }
+.witness-optional-field { margin-top: 0; }
+.witness-validation-error {
+  border-color: #d92d20 !important;
+  box-shadow: 0 0 0 3px rgba(217,45,32,.12) !important;
+}
+.witness-validation-message {
+  margin: 9px 2px 0;
+  color: #d92d20;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.4;
+}
+.witness-validation-shake { animation: witnessValidationShake .38s ease; }
+@keyframes witnessValidationShake {
+  0%,100% { transform: translateX(0); }
+  20% { transform: translateX(-7px); }
+  40% { transform: translateX(6px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(3px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .witness-validation-shake { animation: none; }
+}
