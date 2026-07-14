@@ -30,7 +30,7 @@ const INV_DOWNLOAD_TOKEN_KEY = 'fieldGuide_investigation_downloadToken';
  * "Teams로 전송" 버튼이 실제로 동작합니다.
  * 비워두면 미리보기만 표시되고 실제 전송은 되지 않습니다.
  */
-const INV_TEAMS_ENDPOINT_URL = 'https://script.google.com/macros/s/AKfycbxQ8t-oSMh97agNb48SOXaZMMhvzLr7JIkZirRNWgWJ8X4Jo-ZN0lBHtHEMqV3K_4U/exec'; // 예: 'https://script.google.com/macros/s/AKfycb.../exec' (새로 배포한 뒤 여기에 붙여넣기)
+const INV_TEAMS_ENDPOINT_URL = ''; // 예: 'https://script.google.com/macros/s/AKfycb.../exec' (새로 배포한 뒤 여기에 붙여넣기)
 
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -671,7 +671,6 @@ document.addEventListener('DOMContentLoaded', () => {
     { key: 'aftermath', title: '사고 직후 모습은 보셨나요?' },
     { key: 'heard', title: '사고 이야기는 누구에게 들으셨나요?' },
     { key: 'work', title: '사고 이후에도 계속 일하는 모습을 보셨나요?' },
-    { key: 'report', title: '관리자에게 사고를 알리는 것을 보셨나요?' },
     { key: 'extra', title: '더 확인된 내용이 있나요?' },
     { key: 'review', title: '입력한 면담 내용을 확인해 주세요.' }
   ];
@@ -702,8 +701,6 @@ document.addEventListener('DOMContentLoaded', () => {
       heardWhen: data.heardWhen || '',
       heardDetail: data.heardDetail || '',
       workAfter: data.workAfter || '',
-      reportSeen: data.reportSeen || '',
-      reportDetail: data.reportDetail || '',
       extraStatus: data.extraStatus || '',
       extra: data.extra || '',
       confirmed: !!data.confirmed,
@@ -821,18 +818,6 @@ document.addEventListener('DOMContentLoaded', () => {
       </div>`;
     }
 
-    if (step.key === 'report') {
-      body = `<div class="witness-choice-list">
-        ${choice(n('reportSeen'), 'direct', '직접 보고하거나 연락하는 것을 봤어요', w.reportSeen === 'direct')}
-        ${choice(n('reportSeen'), 'heard', '보고했다는 이야기만 들었어요', w.reportSeen === 'heard')}
-        ${choice(n('reportSeen'), 'unknown', '확인하지 못했어요 / 잘 모르겠어요', w.reportSeen === 'unknown')}
-      </div>`;
-      if (w.reportSeen === 'direct' || w.reportSeen === 'heard') {
-        body += `<label class="form-full witness-conditional">누구에게 언제 알렸는지 아는 만큼 적어주세요. <small>(선택)</small>
-          <textarea data-field="reportDetail" rows="3">${escapeHtml(w.reportDetail)}</textarea>
-        </label>`;
-      }
-    }
 
     if (step.key === 'extra') {
       body = `<div class="witness-choice-list">
@@ -855,7 +840,6 @@ document.addEventListener('DOMContentLoaded', () => {
           ${w.sawAccident === 'yes' ? '' : `<div><dt>사고 직후 모습</dt><dd>${w.sawAftermath === 'clear' ? '평소와 다른 모습 확인' : w.sawAftermath === 'uncertain' ? '관련성 불명확' : '보지 못함 / 기억나지 않음'}</dd></div>
           <div><dt>사고 이야기</dt><dd>${w.heardFrom === 'victim' ? '재해자에게 직접 들음' : w.heardFrom === 'other' ? '다른 사람에게 들음' : '듣지 못함 / 잘 모르겠음'}</dd></div>`}
           <div><dt>사고 이후 근무</dt><dd>${w.workAfter === 'stopped' ? '업무 중단 또는 휴식' : w.workAfter === 'continued' ? '평소처럼 업무 계속' : '확인하지 못함'}</dd></div>
-          <div><dt>관리자 보고</dt><dd>${w.reportSeen === 'direct' ? '직접 확인' : w.reportSeen === 'heard' ? '보고했다는 말을 들음' : '확인하지 못함'}</dd></div>
         </dl>
         <span class="classify-badge ${classifyBadgeClass(c.type)}">${c.label}</span>
       </div>
@@ -903,7 +887,7 @@ document.addEventListener('DOMContentLoaded', () => {
       else w[key] = el.value;
     });
     const seq = card.dataset.seq;
-    const radioFields = ['sawAccident','sawAftermath','aftermathKind','heardFrom','heardWhen','workAfter','reportSeen','extraStatus'];
+    const radioFields = ['sawAccident','sawAftermath','aftermathKind','heardFrom','heardWhen','workAfter','extraStatus'];
     radioFields.forEach(key => {
       const checked = card.querySelector(`input[name="${key}_${seq}"]:checked`);
       if (checked) w[key] = checked.value;
@@ -946,7 +930,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (((w.heardFrom === 'victim' && w.heardWhen !== 'unknown') || w.heardFrom === 'other') && !w.heardDetail.trim()) return '들은 내용을 간단히 작성해 주세요.';
         return '';
       case 'work': return w.workAfter ? '' : '답변을 선택해 주세요.';
-      case 'report': return w.reportSeen ? '' : '답변을 선택해 주세요.';
       case 'extra':
         if (!w.extraStatus) return '답변을 선택해 주세요.';
         if (w.extraStatus === 'yes' && !w.extra.trim()) return '추가 내용을 작성해 주세요.';
@@ -1027,7 +1010,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!card) return;
     syncVisibleFields(card);
     const key = e.target.name ? e.target.name.split('_')[0] : '';
-    if (['sawAccident','sawAftermath','aftermathKind','heardFrom','heardWhen','reportSeen','extraStatus'].includes(key)) {
+    if (['sawAccident','sawAftermath','aftermathKind','heardFrom','heardWhen','extraStatus'].includes(key)) {
       renderWitnessStep(card);
     }
     saveWitnesses();
@@ -1172,7 +1155,7 @@ document.addEventListener('DOMContentLoaded', () => {
     else if (base.invCctv === 'none') reasons.push('사고 장면을 확인할 수 있는 CCTV 영상은 확보되지 않았습니다.');
 
     if (base.invWorkVideoAvailable === 'no') {
-      reasons.push('사고 당일의 다른 근무영상도 확보하지 못해 사고 전후의 행동 변화와 지속 여부를 확인할 수 없었습니다.' + (base.invWorkVideoUnavailableReason ? ` 사유: ${base.invWorkVideoUnavailableReason}` : ''));
+      reasons.push('사고 당일의 다른 근무영상도 확보하지 못해 사고 전후의 행동 변화와 지속 여부를 확인할 수 없었습니다.' + (base.invWorkVideoUnavailableReason ? ` ${base.invWorkVideoUnavailableReason}` : ''));
     } else if (clearWorkVideo) {
       reasons.push('사고 당일 근무영상에서 사고 직후 통증 호소 또는 평소와 다른 행동이 확인되었습니다.' + (base.invWorkVideoDetail ? ` 확인내용: ${base.invWorkVideoDetail}` : ''));
     } else if (unclearWorkVideo) {
@@ -1304,8 +1287,6 @@ document.addEventListener('DOMContentLoaded', () => {
               ...(((w.heardFrom === 'victim' && w.heardWhen && w.heardWhen !== 'unknown') || w.heardFrom === 'other') ? [['어떤 말을 들으셨나요?', w.heardDetail || '-']] : [])
             ]),
         ['사고 이후에도 계속 일하는 모습을 보셨나요?', witnessAnswerText(w, 'workAfter')],
-        ['관리자에게 사고를 알리는 것을 보셨나요?', witnessAnswerText(w, 'reportSeen')],
-        ...((w.reportSeen === 'direct' || w.reportSeen === 'heard') && w.reportDetail ? [['보고 관련 내용', w.reportDetail]] : []),
         ['더 확인된 내용이 있나요?', witnessAnswerText(w, 'extraStatus')],
         ...(w.extraStatus === 'yes' ? [['추가 내용', w.extra || '-']] : [])
       ];
@@ -1498,11 +1479,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (eyebrow) eyebrow.textContent = result.hasConflict ? '확인자료 재검토 필요' : '최종 판단 확인';
     if (title) title.textContent = result.hasConflict ? '확인자료 간 내용이 서로 다릅니다.' : '조사 결과를 확인해 주세요.';
     if (message) message.textContent = result.hasConflict
-      ? 'CCTV, 목격자 면담 및 보고기록을 다시 확인한 후 최종 판단을 선택해 주세요.'
+      ? 'CCTV, 목격자 면담 및 첨부자료를 다시 확인한 후 최종 판단을 선택해 주세요.'
       : '입력한 자료를 바탕으로 시스템이 판단 방향을 제안했습니다. 최종 판단을 확인해 주세요.';
     if (confirmText) confirmText.textContent = result.hasConflict
-      ? 'CCTV, 목격자 면담 및 보고기록의 차이를 확인하고 최종 판단했습니다.'
-      : 'CCTV, 목격자 면담 및 보고기록을 확인하고 최종 판단했습니다.';
+      ? 'CCTV, 목격자 면담 및 첨부자료의 차이를 확인하고 최종 판단했습니다.'
+      : 'CCTV, 목격자 면담 및 첨부자료를 확인하고 최종 판단했습니다.';
     const selected = document.querySelector('input[name="invManualVerdict"]:checked');
     if (reasonWrap) reasonWrap.style.display = selected && selected.value === 'unrecognized' ? '' : 'none';
 
@@ -1543,6 +1524,19 @@ document.addEventListener('DOMContentLoaded', () => {
       openFinalReview(result);
     });
   }
+
+  function closeFinalReview() {
+    const guide = document.getElementById('invReviewGuideOverlay');
+    if (guide) {
+      guide.classList.remove('visible');
+      guide.setAttribute('aria-hidden', 'true');
+    }
+  }
+
+  const reviewBackBtn = document.getElementById('invReviewGuideBackBtn');
+  const reviewCloseBtn = document.getElementById('invReviewGuideCloseBtn');
+  if (reviewBackBtn) reviewBackBtn.addEventListener('click', closeFinalReview);
+  if (reviewCloseBtn) reviewCloseBtn.addEventListener('click', closeFinalReview);
 
   const conflictReason = document.getElementById('invConflictReason');
   const conflictConfirm = document.getElementById('invConflictConfirm');
