@@ -98,10 +98,15 @@ document.addEventListener('DOMContentLoaded', () => {
   if (guideUpdateBtn) guideUpdateBtn.addEventListener('click', () => {
     closeManualGuidePopup();
     activateTab('manual', { skipManualGuide: true });
+
+    // 개정사항 챕터는 기본적으로 숨김 상태이므로 먼저 해당 챕터를 활성화한 뒤 이동합니다.
+    const updateChip = document.querySelector('.man-chapter-chip[data-mchapter="update2026"]');
+    if (updateChip) updateChip.click();
+
     setTimeout(() => {
       const target = document.getElementById('update2026');
       if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }, 80);
+    }, 120);
   });
 
   // 최초 진입 시 URL 해시가 있으면 해당 탭 활성화
