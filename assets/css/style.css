@@ -3502,3 +3502,146 @@ button {
 @media (max-width: 420px) {
   .guide-footer { grid-template-columns: 1fr; }
 }
+
+/* ============================================================
+   v38 - 정보 입력 2열 순차 노출 및 날짜 입력 가독성 개선
+   ============================================================ */
+.inv-sequential-fields {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px 10px;
+  align-items: end;
+}
+
+.inv-seq-field {
+  min-width: 0;
+  margin: 0;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--gray-700);
+}
+
+.inv-seq-field.active {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.inv-seq-field select,
+.inv-seq-field input {
+  box-sizing: border-box;
+  min-width: 0;
+  width: 100%;
+  height: 44px;
+  background: #fff;
+  color: var(--ink);
+  border: 1.5px solid var(--gray-200);
+  border-radius: var(--radius-sm);
+  padding: 9px 10px;
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 1.2;
+}
+
+.inv-seq-field select:focus,
+.inv-seq-field input:focus {
+  border-color: var(--red);
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(218, 41, 28, 0.10);
+  outline: none;
+}
+
+.inv-seq-field input[type="date"] {
+  appearance: none;
+  -webkit-appearance: none;
+  color-scheme: light;
+  padding-right: 8px;
+  background-color: #fff;
+}
+
+.inv-seq-field input[type="date"]::-webkit-calendar-picker-indicator {
+  margin: 0;
+  padding: 2px;
+  opacity: .72;
+  cursor: pointer;
+}
+
+.inv-seq-field.inv-newly-revealed {
+  animation: invFieldRevealHighlight .55s ease both;
+}
+
+@keyframes invFieldRevealHighlight {
+  0% { opacity: 0; transform: translateY(8px); }
+  45% { opacity: 1; transform: translateY(0); }
+  70% { filter: drop-shadow(0 0 0 rgba(37, 99, 235, 0)); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 420px) {
+  .inv-sequential-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px 8px;
+  }
+
+  .inv-seq-field {
+    font-size: 11.5px;
+  }
+
+  .inv-seq-field select,
+  .inv-seq-field input {
+    height: 42px;
+    padding: 8px 8px;
+    font-size: 12.5px;
+  }
+
+  .inv-seq-field input[type="date"] {
+    font-size: 12px;
+    padding-left: 7px;
+    padding-right: 5px;
+  }
+}
+
+
+/* v39: 목격자 없음 선택 시 임시면담 보관/복원 안내 */
+.inv-witness-draft-notice {
+  display: none;
+  margin: -4px 0 14px;
+  padding: 10px 12px;
+  border: 1px solid #d9e4f5;
+  border-radius: 10px;
+  background: #f5f8fc;
+  color: #5f6f85;
+  font-size: 13px;
+  line-height: 1.45;
+}
+.inv-witness-draft-notice.visible { display: block; animation: invRevealField .24s ease both; }
+.inv-witness-draft-notice.is-restored { border-color: #c8e6d2; background: #f3fbf6; color: #376a49; }
+
+/* v40 CCTV 세부 검증 영역 — 실제 선택/입력 카드만 강조 */
+.inv-validation-group {
+  border: 1px solid transparent;
+  border-radius: 14px;
+  padding: 2px;
+  transition: border-color .18s ease, box-shadow .18s ease, background-color .18s ease;
+}
+.inv-validation-group.inv-validation-error {
+  padding: 10px;
+  background: #fff8f7;
+}
+#invWorkVideoDetailWrap.inv-validation-error {
+  background: #fff8f7;
+}
+
+
+/* v42 공유기록 세부 검증 영역 */
+#invReportChoiceGroup.inv-validation-error,
+#invReportChatWrap.inv-validation-error,
+#invReportImmediateWrap.inv-validation-error {
+  padding: 10px;
+  background: #fff8f7;
+}
+#invReportChoiceGroup .inv-validation-message,
+#invReportChatWrap .inv-validation-message,
+#invReportImmediateWrap .inv-validation-message {
+  margin-top: 10px;
+}
