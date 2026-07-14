@@ -3454,3 +3454,51 @@ button {
 @media (prefers-reduced-motion: reduce) {
   .witness-validation-shake { animation: none; }
 }
+
+
+/* v35 전체 단계 공통 필수항목 안내 */
+.inv-validation-error {
+  border-color:#d92d20 !important;
+  box-shadow:0 0 0 3px rgba(217,45,32,.12) !important;
+}
+.inv-validation-message {
+  margin:9px 2px 0; color:#d92d20; font-size:12px; font-weight:800; line-height:1.4;
+}
+.inv-validation-shake { animation:invValidationShake .38s ease; }
+@keyframes invValidationShake {
+  0%,100%{transform:translateX(0)} 20%{transform:translateX(-7px)} 40%{transform:translateX(6px)} 60%{transform:translateX(-4px)} 80%{transform:translateX(3px)}
+}
+.inv-optional-input { margin-top:14px; padding:14px; border:1px solid #cdddf7; background:#f4f8ff; border-radius:14px; }
+.inv-optional-badge { display:inline-flex; margin-left:6px; padding:2px 7px; border-radius:999px; background:#eef2f6; color:#667085; font-size:11px; font-weight:800; vertical-align:middle; }
+.inv-conflict-topbar { justify-content:flex-end; }
+.inv-confirm-check.inv-validation-error { padding:12px; border:1px solid #d92d20; border-radius:12px; }
+@media (prefers-reduced-motion:reduce){.inv-validation-shake{animation:none}}
+
+
+/* v36 공유기록 3분기 카드 통일 */
+.inv-report-choice-list .radio-pill > span{display:flex;flex-direction:column;gap:4px;min-width:0;}
+.inv-report-choice-list .radio-pill b{font-size:inherit;font-weight:700;color:inherit;}
+.inv-report-choice-list .radio-pill small{font-size:.84em;font-weight:400;line-height:1.45;color:#8a8f98;}
+.inv-report-choice-list .radio-pill.is-checked small{color:rgba(255,255,255,.82);}
+
+.guide-footer {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  padding: 14px 18px 18px;
+}
+.guide-footer .primary-btn,
+.guide-footer .secondary-btn {
+  width: 100%;
+  margin: 0;
+  min-height: 44px;
+  font-size: 13px;
+}
+.guide-update-btn {
+  border: 1px solid var(--navy-700);
+  color: var(--navy-900);
+  background: #fff;
+}
+@media (max-width: 420px) {
+  .guide-footer { grid-template-columns: 1fr; }
+}
