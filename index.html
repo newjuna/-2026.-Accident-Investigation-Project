@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>사고 발생 현장 대응 가이드 | 안전보건팀</title>
-<link rel="stylesheet" href="assets/css/style.css?v=gpt-v1-22">
+<link rel="stylesheet" href="assets/css/style.css?v=gpt-v1-27">
 <!-- 결과 문서 서명란에 사용하는 손글씨 느낌 폰트 (Google Fonts) -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Nanum+Pen+Script&display=swap" rel="stylesheet">
@@ -263,15 +263,54 @@
       <section class="inv-flow-step" data-inv-step="evidence">
         <div class="inv-question-head">
           <p class="inv-step-label">2/4 CCTV</p>
-          <h3>CCTV에 사고 장면이 어떻게 찍혀 있나요? <button type="button" class="inv-head-help" id="invCctvHelpBtn" aria-label="CCTV 확인 안내">?</button></h3>
+          <h3>CCTV에 사고 장면이 어떻게 찍혀 있나요?</h3>
+          <button type="button" class="inv-video-example-btn" id="invCctvHelpBtn">✨ 영상 판단 예시</button>
         </div>
 
-        <div class="modal-overlay inv-guide-modal" id="invCctvHelpModal">
-          <div class="modal-box">
-            <h3>CCTV 확인 안내</h3>
-            <p class="modal-note">사고 장면이 명확하지 않거나 영상이 없으면 당일 근무 영상에서 통증 호소 장면이 있는지 확인합니다.</p>
-            <div class="modal-btn-row">
-              <button class="primary-btn" id="invCctvHelpCloseBtn" type="button" style="margin:0;">확인</button>
+        <div class="modal-overlay inv-video-guide-overlay" id="invCctvHelpModal" aria-hidden="true">
+          <div class="inv-video-guide-page" role="dialog" aria-modal="true" aria-labelledby="invVideoGuideTitle">
+            <div class="inv-video-guide-icon">🎥</div>
+            <p class="inv-video-guide-kicker">CCTV FACT CHECK</p>
+            <h3 id="invVideoGuideTitle">영상 판단 예시</h3>
+            <div class="inv-typewriter-area" aria-live="polite">
+              <p id="invTypeLine1"></p>
+              <p id="invTypeLine2"></p>
+              <p id="invTypeLine3"></p>
+            </div>
+
+            <div class="inv-video-example-grid" id="invVideoExampleGrid">
+              <article class="inv-video-example-card is-clear">
+                <strong>통증·불편함이 명확한 모습</strong>
+                <ul>
+                  <li>특정 부위를 반복적으로 잡거나 주무름</li>
+                  <li>주저앉음, 절뚝거림 또는 부축받아 이동함</li>
+                  <li>작업을 중단하거나 주변 직원에게 도움을 요청함</li>
+                  <li>동일 작업을 계속하지 못하거나 다친 부위를 보여줌</li>
+                </ul>
+              </article>
+              <article class="inv-video-example-card is-uncertain">
+                <strong>통증과의 관련성이 불명확한 모습</strong>
+                <ul>
+                  <li>잠깐 스트레칭한 뒤 정상적으로 업무함</li>
+                  <li>특정 부위를 한두 번 만진 뒤 다시 작업함</li>
+                  <li>행동 전후 보행·작업 속도에 변화가 없음</li>
+                  <li>사고 주장 시각과 해당 행동의 연결이 불명확함</li>
+                </ul>
+              </article>
+              <article class="inv-video-example-card is-normal">
+                <strong>평소와 다른 행동이 확인되지 않는 모습</strong>
+                <ul>
+                  <li>정상적으로 상품을 진열·운반함</li>
+                  <li>정상 보행 및 허리를 숙였다 일어나는 동작을 수행함</li>
+                  <li>작업 중단 없이 동일 업무를 계속함</li>
+                  <li>특정 부위를 보호하거나 반복적으로 만지는 행동이 없음</li>
+                </ul>
+              </article>
+            </div>
+
+            <div class="inv-video-guide-action" id="invVideoGuideAction">
+              <span class="inv-guide-reading">안내 내용을 확인하고 있습니다...</span>
+              <button class="primary-btn" id="invCctvHelpCloseBtn" type="button">확인하고 작성하기</button>
             </div>
           </div>
         </div>
@@ -285,10 +324,38 @@
           </div>
 
           <div id="invWorkVideoWrap" class="conditional-block inv-follow-question" style="display:none">
-            <p class="field-label">당일 근무 영상에서 통증 호소 장면이 보이나요?</p>
+            <div class="inv-required-video-notice">
+              <strong>사고 장면이 직접 확인되지 않는 경우</strong>
+              <span>사고 당일의 다른 근무영상을 함께 확인해 주세요.</span>
+            </div>
+
+            <p class="field-label">사고 당일의 다른 근무영상을 확보했나요?</p>
             <div class="radio-pill-row inv-choice-stack">
-              <label class="radio-pill"><input type="radio" name="invWorkVideoAbnormal" value="yes"> 통증 호소 장면이 보임</label>
-              <label class="radio-pill"><input type="radio" name="invWorkVideoAbnormal" value="no"> 통증 호소 장면이 안 보임</label>
+              <label class="radio-pill"><input type="radio" name="invWorkVideoAvailable" value="yes"> 당일 근무영상 확보함</label>
+              <label class="radio-pill"><input type="radio" name="invWorkVideoAvailable" value="no"> 확인 가능한 다른 영상도 없음</label>
+            </div>
+
+            <div id="invWorkVideoObservationWrap" style="display:none">
+              <p class="field-label">확보한 영상에서 확인되는 모습은 무엇인가요?</p>
+              <p class="inv-field-guide">사고 주장 시점 전후의 행동 변화와 지속 여부를 함께 확인해 주세요.</p>
+              <div class="radio-pill-row inv-choice-stack inv-video-observation-options">
+                <label class="radio-pill"><input type="radio" name="invWorkVideoAbnormal" value="clear">
+                  <span><b>통증이나 불편함이 명확히 확인됨</b><small>반복적으로 특정 부위를 잡음 · 작업 중단 · 절뚝거림 등</small></span>
+                </label>
+                <label class="radio-pill"><input type="radio" name="invWorkVideoAbnormal" value="uncertain">
+                  <span><b>일부 행동은 보이나 관련성이 불명확함</b><small>잠깐 스트레칭한 뒤 정상적으로 업무하는 모습 등</small></span>
+                </label>
+                <label class="radio-pill"><input type="radio" name="invWorkVideoAbnormal" value="normal">
+                  <span><b>평소와 다른 행동이 확인되지 않음</b><small>정상 보행 · 진열 · 운반을 계속하는 모습 등</small></span>
+                </label>
+              </div>
+              <label class="inv-observation-detail-label" for="invWorkVideoDetail">확인된 행동을 간단히 작성해 주세요.</label>
+              <textarea id="invWorkVideoDetail" class="inv-textarea" rows="3" placeholder="예: 사고 주장 이후 잠깐 허리를 펴는 모습이 확인됐으나 반복되지 않았고, 이후 정상적으로 진열 업무를 계속함."></textarea>
+            </div>
+
+            <div id="invWorkVideoUnavailableWrap" style="display:none">
+              <label class="inv-observation-detail-label" for="invWorkVideoUnavailableReason">다른 영상을 확인하지 못한 사유를 작성해 주세요.</label>
+              <textarea id="invWorkVideoUnavailableReason" class="inv-textarea" rows="3" placeholder="예: 해당 시간대 다른 CCTV도 사각지대이며, 저장기간 경과로 추가 영상을 확보하지 못함."></textarea>
             </div>
           </div>
         </fieldset>
@@ -384,12 +451,31 @@
   </section>
 
   <div class="submit-overlay inv-review-guide-overlay" id="invReviewGuideOverlay" aria-hidden="true">
-    <div class="submit-box">
-      <p class="submit-eyebrow">결과 확인 전</p>
-      <h3 id="invReviewGuideTitle">판단 사유는 직접 수정할 수 있습니다.</h3>
-      <p class="submit-message" id="invReviewGuideMessage">결과 확인서에서 노란색으로 강조되는 판단 사유를 눌러, 실제 확인 내용과 다르면 제출 전에 수정해주세요.</p>
+    <div class="submit-box inv-conflict-box">
+      <p class="submit-eyebrow">확인자료 재검토 필요</p>
+      <h3 id="invReviewGuideTitle">확인자료 간 내용이 서로 다릅니다.</h3>
+      <p class="submit-message" id="invReviewGuideMessage">CCTV, 목격자 면담 및 보고기록을 다시 확인한 후 최종 판단을 선택하고 자동 생성 문구를 수정해 주세요.</p>
+
+      <div class="inv-conflict-choice" id="invConflictChoice">
+        <p class="field-label">최종 판단 <span class="required-mark">필수</span></p>
+        <div class="radio-pill-row inv-choice-stack">
+          <label class="radio-pill"><input type="radio" name="invManualVerdict" value="recognized"> 사고 발생 사실 인정</label>
+          <label class="radio-pill"><input type="radio" name="invManualVerdict" value="unrecognized"> 사고 발생 사실 불인정</label>
+        </div>
+
+        <label class="form-full inv-conflict-editor-label">최종 판단 사유 <span class="required-mark">필수 수정</span>
+          <textarea id="invConflictReason" rows="8"></textarea>
+        </label>
+        <p class="inv-conflict-edit-note" id="invConflictEditNote">자동 생성 문구를 실제 확인내용에 맞게 직접 수정해야 저장할 수 있습니다.</p>
+
+        <label class="inv-confirm-check">
+          <input type="checkbox" id="invConflictConfirm">
+          <span>CCTV, 목격자 면담 및 보고기록의 차이를 확인하고 최종 판단했습니다.</span>
+        </label>
+      </div>
+
       <div class="submit-actions" style="display:flex;">
-        <button class="primary-btn" id="invReviewGuideOkBtn" type="button" style="margin:0;">확인서 보기</button>
+        <button class="primary-btn" id="invReviewGuideOkBtn" type="button" style="margin:0;" disabled>수정 내용 저장하고 결과 보기</button>
       </div>
     </div>
   </div>
@@ -404,7 +490,7 @@
       <div id="invResultArea"></div>
 
       <div id="invDocBox" style="display:none">
-        <p class="modal-note">아래는 입력한 내용으로 자동 생성된 결과 문서 미리보기입니다. 판단 사유와 불인정 의견서 별지 문구는 직접 눌러 수정할 수 있습니다. 조직·매장·사고정보 등을 고치려면 뒤로가기 후 "검토 완료"를 다시 눌러야 반영됩니다.</p>
+        <p class="modal-note">아래는 입력한 내용과 최종 검토 결과로 생성된 문서입니다. 내용을 다시 수정하려면 뒤로가기를 눌러 해당 항목을 수정한 뒤 결과를 다시 확인해 주세요.</p>
 
         <div id="invDocPreview" class="doc-preview"></div>
 
@@ -1364,8 +1450,8 @@
 <script src="assets/js/search-data.js?v=gpt-v1-22"></script>
 <script src="assets/js/faq-data.js?v=gpt-v1-22"></script>
 <script src="assets/js/org-data.js?v=gpt-v1-22"></script>
-<script src="assets/js/investigation.js?v=gpt-v1-22"></script>
-<script src="assets/js/auth.js?v=gpt-v1-22"></script>
+<script src="assets/js/investigation.js?v=gpt-v1-27"></script>
+<script src="assets/js/auth.js?v=gpt-v1-27"></script>
 <script src="assets/js/manual.js?v=gpt-v1-22"></script>
 <script src="assets/js/main.js?v=gpt-v1-22"></script>
 </body>
