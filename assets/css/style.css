@@ -3012,3 +3012,254 @@ button {
   }
   .home-menu-arrow { justify-self: end; }
 }
+
+
+/* ---------- GPT V1.21 사고조사 사용성 보정 ---------- */
+.inv-flow-progress span {
+  cursor: pointer;
+  user-select: none;
+  transition: transform .15s ease, border-color .15s ease, background .15s ease;
+}
+.inv-flow-progress span:active { transform: scale(.97); }
+.inv-flow-progress span:focus-visible {
+  outline: 3px solid rgba(42,77,143,.22);
+  outline-offset: 2px;
+}
+
+/* 다음 버튼을 위에, 이전 버튼을 아래에 표시 */
+.inv-step-actions.split {
+  display: flex;
+  flex-direction: column;
+}
+.inv-step-actions.split .primary-btn { order: 1; }
+.inv-step-actions.split .secondary-btn { order: 2; }
+
+.witness-presence-box { margin-bottom: 14px; }
+.witness-presence-options { grid-template-columns: 1fr 1fr; }
+.witness-presence-options .radio-pill {
+  justify-content: center;
+  min-height: 48px;
+  font-size: 14px;
+}
+
+/* 면담 입력란을 엑셀형 표가 아닌 카드형 입력영역으로 정리 */
+.witness-card {
+  padding: 18px;
+  border-radius: 16px;
+  border: 1px solid #dce3ee;
+  box-shadow: 0 5px 16px rgba(15,31,61,.08);
+}
+.witness-card .form-full {
+  display: block;
+  margin: 0 0 14px;
+  padding: 12px;
+  border: 1px solid #e4e8ef;
+  border-radius: 12px;
+  background: #f8fafc;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--navy-900);
+}
+.witness-card .form-full input,
+.witness-card .form-full textarea {
+  margin-top: 8px;
+  background: #fff;
+  border: 1.5px solid #cfd7e5;
+  border-radius: 10px;
+  padding: 12px;
+  font-size: 14px;
+  font-weight: 500;
+}
+.witness-card > .field-label {
+  margin: 16px 0 8px;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--navy-900);
+}
+.stmt-table {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 9px;
+  padding: 0;
+  background: transparent;
+}
+.stmt-row {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-areas: "radio badge" "radio text";
+  align-items: center;
+  column-gap: 10px;
+  row-gap: 4px;
+  margin: 0;
+  padding: 13px 14px;
+  border: 1.5px solid #dce3ee;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 2px 7px rgba(15,31,61,.04);
+}
+.stmt-row input[type="radio"] { grid-area: radio; order: initial; }
+.stmt-group {
+  grid-area: badge;
+  order: initial;
+  width: max-content;
+  min-width: 64px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  text-align: center;
+}
+.stmt-label { grid-area: text; order: initial; line-height: 1.45; }
+.stmt-row:has(input:checked) {
+  border-color: var(--navy-600);
+  background: var(--blue-50);
+  box-shadow: inset 0 0 0 1px var(--navy-600);
+}
+
+/* 판단 사유와 불인정 별지를 충분히 오래 강조 */
+.doc-reason-list.reason-highlight,
+.doc-appendix-box.reason-highlight {
+  animation: reasonEditablePulseLong 6s ease-in-out;
+  border-radius: 10px;
+}
+@keyframes reasonEditablePulseLong {
+  0%, 100% { background: transparent; box-shadow: 0 0 0 0 rgba(246,196,83,0); transform: scale(1); }
+  8%, 28%, 48%, 68% { background: #fff1a8; box-shadow: 0 0 0 7px rgba(246,196,83,.20); transform: scale(1.008); }
+  18%, 38%, 58%, 82% { background: #fff8d9; box-shadow: 0 0 0 3px rgba(246,196,83,.11); transform: scale(1); }
+}
+
+@media (max-width: 430px) {
+  .witness-presence-options { grid-template-columns: 1fr 1fr; }
+}
+
+
+/* ===== GPT V1.23 : 영상 판단 예시 안내 ===== */
+.inv-video-example-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  min-height: 42px; margin-top: 10px; padding: 9px 15px;
+  border: 1px solid #e7a9a9; border-radius: 999px;
+  background: #fff8f8; color: #a91f24; font-weight: 800; font-size: 14px;
+  box-shadow: 0 0 0 0 rgba(190, 35, 42, .25);
+  animation: invVideoGuidePulse 2s ease-in-out infinite;
+}
+@keyframes invVideoGuidePulse {
+  0%,100% { transform: translateY(0); box-shadow: 0 0 0 0 rgba(190,35,42,.10); background:#fff8f8; }
+  50% { transform: translateY(-1px); box-shadow: 0 0 0 7px rgba(190,35,42,.08); background:#fff1f1; }
+}
+.inv-video-guide-overlay { align-items: stretch; padding: 0; overflow-y: auto; background: rgba(12,20,34,.82); z-index: 4000; }
+.inv-video-guide-page {
+  width: min(100%, 620px); min-height: 100dvh; margin: 0 auto; padding: 34px 20px calc(190px + env(safe-area-inset-bottom));
+  background: linear-gradient(180deg,#f7f9fc 0%,#fff 35%); text-align: center;
+}
+.inv-video-guide-icon { font-size: 38px; margin-top: 8px; }
+.inv-video-guide-kicker { margin: 9px 0 3px; color:#8a96a8; font-size:11px; font-weight:900; letter-spacing:.16em; }
+.inv-video-guide-page h3 { margin:0; color:#172033; font-size:25px; }
+.inv-typewriter-area { min-height: 118px; margin: 22px auto 14px; max-width: 520px; color:#293449; }
+.inv-typewriter-area p { margin:8px 0; min-height: 1.5em; font-size:16px; font-weight:700; line-height:1.55; }
+.inv-typewriter-area p.is-typing::after { content:'|'; margin-left:2px; color:#ba2028; animation: invCaret .7s step-end infinite; }
+@keyframes invCaret { 50% { opacity:0; } }
+.inv-video-example-grid { opacity:0; transform:translateY(16px); transition:opacity .45s ease, transform .45s ease; text-align:left; }
+.inv-video-example-grid.visible { opacity:1; transform:translateY(0); }
+.inv-video-example-card { padding:14px 15px; margin:10px 0; border:1px solid #e3e8ef; border-radius:14px; background:#fff; box-shadow:0 5px 16px rgba(31,42,61,.06); }
+.inv-video-example-card strong { display:block; margin-bottom:7px; font-size:14px; color:#182235; }
+.inv-video-example-card ul { margin:0; padding-left:18px; color:#4c586b; font-size:13px; line-height:1.55; }
+.inv-video-example-card.is-clear { border-left:4px solid #2e8b57; }
+.inv-video-example-card.is-uncertain { border-left:4px solid #d69a16; }
+.inv-video-example-card.is-normal { border-left:4px solid #667085; }
+.inv-video-guide-action { position:fixed; left:50%; bottom:calc(16px + env(safe-area-inset-bottom)); transform:translateX(-50%); z-index:4010; width:min(calc(100% - 32px), 420px); min-height:64px; display:flex; align-items:center; justify-content:center; padding:8px; border-radius:18px; background:rgba(255,255,255,.96); box-shadow:0 10px 30px rgba(22,31,50,.22); backdrop-filter:blur(8px); }
+.inv-video-guide-action .primary-btn { margin:0; width:100%; min-height:50px; max-width:420px; font-size:15px; font-weight:900; }
+.inv-guide-reading { color:#8993a3; font-size:13px; }
+.inv-field-guide { margin:-2px 0 10px; color:#6c7788; font-size:12px; line-height:1.45; }
+.inv-video-observation-options .radio-pill { align-items:flex-start; }
+.inv-video-observation-options .radio-pill span { display:flex; flex-direction:column; gap:4px; }
+.inv-video-observation-options .radio-pill b { font-size:14px; color:inherit; }
+.inv-video-observation-options .radio-pill small { font-size:12px; line-height:1.4; color:#768195; font-weight:500; }
+.inv-observation-detail-label { display:block; margin:15px 0 7px; color:#273246; font-size:13px; font-weight:800; }
+@media (prefers-reduced-motion: reduce) {
+  .inv-video-example-btn, .inv-typewriter-area p.is-typing::after { animation:none; }
+  .inv-video-example-grid { transition:none; }
+}
+
+
+/* ===== GPT V1.24 : 사고영상/당일 근무영상 분리 ===== */
+.inv-required-video-notice { display:flex; flex-direction:column; gap:4px; margin:0 0 14px; padding:13px 14px; border:1px solid #f0c36a; border-radius:13px; background:#fff9ea; color:#5f4512; }
+.inv-required-video-notice strong { font-size:13px; }
+.inv-required-video-notice span { font-size:12px; line-height:1.45; }
+#invWorkVideoObservationWrap, #invWorkVideoUnavailableWrap { margin-top:14px; padding-top:14px; border-top:1px dashed #d8dee8; }
+
+/* ===== GPT V1.25 : 영상 가이드 하단 겹침 방지 ===== */
+@media (max-width: 640px) {
+  .inv-video-guide-page { padding-bottom: calc(210px + env(safe-area-inset-bottom)); }
+  .inv-video-example-grid { margin-bottom: 24px; }
+}
+
+/* ===== GPT V1.27 : 대화형 목격자 면담 + 충돌자료 최종판단 ===== */
+.witness-card {
+  overflow: hidden;
+  border: 1px solid #dfe5ee;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 8px 24px rgba(28, 39, 58, .07);
+}
+.witness-wizard-host { min-height: 355px; }
+.witness-wizard-step { padding: 6px 2px 2px; }
+.witness-progress { display:flex; align-items:center; gap:10px; margin: 0 0 18px; }
+.witness-progress > span { min-width: 38px; color:#7a8596; font-size:12px; font-weight:800; }
+.witness-progress > div { flex:1; height:6px; overflow:hidden; border-radius:999px; background:#edf0f5; }
+.witness-progress i { display:block; height:100%; border-radius:inherit; background:linear-gradient(90deg,#ba2028,#e3575d); transition:width .25s ease; }
+.witness-wizard-step h5 { margin:0 0 18px; color:#182235; font-size:19px; line-height:1.35; }
+.witness-step-body { min-height:250px; }
+.witness-choice-list { display:grid; gap:10px; }
+.witness-choice { position:relative; display:flex; align-items:center; min-height:54px; padding:13px 14px; border:1px solid #dfe4ec; border-radius:14px; background:#fff; cursor:pointer; transition:.18s ease; }
+.witness-choice:hover { border-color:#c8d0dc; background:#fbfcfe; }
+.witness-choice input { position:absolute; opacity:0; pointer-events:none; }
+.witness-choice span { color:#344054; font-size:14px; font-weight:750; line-height:1.4; }
+.witness-choice:has(input:checked) { border-color:#ba2028; background:#fff5f5; box-shadow:0 0 0 2px rgba(186,32,40,.08); }
+.witness-choice:has(input:checked) span { color:#9e1b22; }
+.witness-choice-list.compact .witness-choice { min-height:48px; padding:11px 13px; }
+.witness-subquestion { margin:18px 0 10px; color:#344054; font-size:13px; font-weight:850; }
+.witness-conditional { margin-top:16px; animation:witnessFadeIn .2s ease; }
+@keyframes witnessFadeIn { from { opacity:0; transform:translateY(5px); } to { opacity:1; transform:none; } }
+.witness-date-row { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px; }
+.witness-date-row label { display:flex; flex-direction:column; gap:7px; color:#475467; font-size:12px; font-weight:800; }
+.witness-date-row input { min-height:46px; padding:10px 11px; border:1px solid #d8dee8; border-radius:11px; background:#fff; font:inherit; }
+.witness-wizard-actions { position:sticky; bottom:0; z-index:5; display:grid; grid-template-columns:1fr 1.35fr; gap:10px; margin:18px -2px -2px; padding:12px 2px 2px; background:linear-gradient(180deg,rgba(255,255,255,0),#fff 26%); }
+.witness-wizard-actions .primary-btn,
+.witness-wizard-actions .secondary-btn { margin:0; min-height:48px; }
+.witness-wizard-actions button:disabled { opacity:.45; cursor:not-allowed; }
+.witness-review-summary { padding:14px; border:1px solid #e2e7ef; border-radius:14px; background:#f9fafc; }
+.witness-review-summary dl { margin:0; }
+.witness-review-summary dl div { display:grid; grid-template-columns:92px 1fr; gap:10px; padding:8px 0; border-bottom:1px solid #edf0f4; }
+.witness-review-summary dl div:last-child { border-bottom:0; }
+.witness-review-summary dt { color:#7a8596; font-size:12px; font-weight:800; }
+.witness-review-summary dd { margin:0; color:#263244; font-size:13px; line-height:1.45; }
+.witness-review-summary .classify-badge { margin-top:12px; }
+.inv-confirm-check { display:flex; align-items:flex-start; gap:10px; margin-top:16px; padding:13px 14px; border:1px solid #dfe5ee; border-radius:13px; background:#fff; color:#344054; font-size:13px; line-height:1.45; }
+.inv-confirm-check input { width:18px; height:18px; margin-top:1px; accent-color:#ba2028; }
+.witness-final-check { border-color:#edc7ca; background:#fff9f9; }
+.witness-card.collapsed .witness-wizard-host,
+.witness-card.collapsed .witness-wizard-actions,
+.witness-card.collapsed .witness-classify-result,
+.witness-card.collapsed .witness-card-head { display:none; }
+
+.inv-conflict-box { width:min(92vw,620px); max-height:90dvh; overflow:auto; text-align:left; }
+.inv-conflict-box .submit-eyebrow,
+.inv-conflict-box h3,
+.inv-conflict-box .submit-message { text-align:center; }
+.inv-conflict-choice { margin-top:18px; }
+.required-mark { display:inline-block; margin-left:5px; color:#b4232b; font-size:11px; font-weight:900; }
+.inv-conflict-editor-label { margin-top:16px; }
+.inv-conflict-editor-label textarea { min-height:190px; border:2px solid #e2a7ab; background:#fffdfd; box-shadow:0 0 0 5px rgba(186,32,40,.05); }
+.inv-conflict-edit-note { margin:8px 0 0; color:#b4232b; font-size:12px; font-weight:750; }
+.inv-conflict-edit-note.done { color:#27834d; }
+.inv-review-guide-overlay .submit-actions { position:sticky; bottom:-1px; padding-top:14px; background:linear-gradient(180deg,rgba(255,255,255,0),#fff 28%); }
+.inv-review-guide-overlay .primary-btn:disabled { opacity:.42; cursor:not-allowed; }
+.doc-reason-text p { margin:0 0 8px; line-height:1.65; }
+
+/* 영상 예시 마지막 카드가 하단 고정 버튼에 가려지지 않도록 충분한 여백 확보 */
+.inv-video-guide-page { padding-bottom: calc(280px + env(safe-area-inset-bottom)); }
+.inv-video-example-grid { padding-bottom: 48px; }
+
+@media (max-width:640px) {
+  .witness-wizard-host { min-height:390px; }
+  .witness-date-row { grid-template-columns:1fr; }
+  .inv-conflict-box { width:100%; max-height:94dvh; border-radius:22px 22px 0 0; align-self:flex-end; }
+}
