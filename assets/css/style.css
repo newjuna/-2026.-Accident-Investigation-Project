@@ -3336,3 +3336,68 @@ button {
   }
   .doc-interview-row { break-inside: avoid; page-break-inside: avoid; }
 }
+
+/* ===== GPT V1.33 : 면담 최소화·조건부 입력 통일·최종판단 팝업 이동 개선 ===== */
+.witness-conditional {
+  margin-top: 16px;
+  padding: 15px;
+  border: 1px solid #d8e4f2;
+  border-radius: 14px;
+  background: #f5f9ff;
+  animation: witnessFadeIn .2s ease;
+}
+.witness-conditional,
+.witness-conditional span,
+.witness-conditional small {
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.45;
+  color: #24364b;
+}
+.witness-conditional textarea,
+.witness-conditional input[type="text"] {
+  width: 100%;
+  min-height: 118px;
+  margin-top: 9px;
+  padding: 13px 14px;
+  border: 1px solid #b9cbe0;
+  border-radius: 12px;
+  background: #fff;
+  font: inherit;
+  font-weight: 500;
+  line-height: 1.55;
+  resize: vertical;
+  box-sizing: border-box;
+}
+.witness-conditional input[type="text"] { min-height: 48px; }
+.inv-conflict-topbar {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: -4px -2px 8px;
+  padding: 4px 2px 8px;
+  background: #fff;
+}
+.inv-conflict-back,
+.inv-conflict-close {
+  border: 0;
+  background: transparent;
+  color: #475467;
+  font-weight: 800;
+  cursor: pointer;
+}
+.inv-conflict-back { padding: 8px 4px; font-size: 14px; }
+.inv-conflict-close {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #f2f4f7;
+  font-size: 16px;
+}
+@media (max-width:640px) {
+  .inv-conflict-topbar { padding-top: 6px; }
+  .inv-conflict-box { padding-top: 10px; }
+}
