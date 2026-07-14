@@ -30,7 +30,7 @@ const INV_DOWNLOAD_TOKEN_KEY = 'fieldGuide_investigation_downloadToken';
  * "Teams로 전송" 버튼이 실제로 동작합니다.
  * 비워두면 미리보기만 표시되고 실제 전송은 되지 않습니다.
  */
-const INV_TEAMS_ENDPOINT_URL = 'https://script.google.com/macros/s/AKfycbw-HYl-JwTRty5rbr7DBW5KnFrXHahA-j-fIPElwnRLwNNGd-iHJhPH-5hcvh5L5FaI/exec'; // 예: 'https://script.google.com/macros/s/AKfycb.../exec' (새로 배포한 뒤 여기에 붙여넣기)
+const INV_TEAMS_ENDPOINT_URL = ''; // 예: 'https://script.google.com/macros/s/AKfycb.../exec' (새로 배포한 뒤 여기에 붙여넣기)
 
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -1184,7 +1184,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (unknown.length > 0) reasons.push('일부 면담 항목은 잘 모르겠거나 기억나지 않는다고 답변하여 사실관계를 확인하기 어려웠습니다.');
 
     if (hasReportAttachment) {
-      reasons.push(`카톡·팀즈 등 사고 보고 또는 공유 기록 캡처 ${chatImages.length}건이 첨부되었습니다.`);
+      // 첨부 이미지는 결과서에 실제로 표시되므로 별도의 '몇 건 첨부' 문구는 판단 근거에 넣지 않습니다.
     } else if (hasReportStatement) {
       reasons.push('사고 보고 또는 공유 기록이 있다고 선택되었으나, 이를 확인할 수 있는 첨부자료는 등록되지 않았습니다.');
     } else {
@@ -1257,6 +1257,55 @@ document.addEventListener('DOMContentLoaded', () => {
    * 결과 문서를 정식 확인서 레이아웃(HTML)으로 #invDocPreview에 렌더링합니다.
    * 판단사유/별지 문구는 contenteditable로 두어, 제출 전 직접 다듬을 수 있게 합니다.
    */
+  function witnessAnswerText(w, key) {
+    const maps = {
+      sawAccident: { yes: '네, 직접 봤어요', no: '아니요, 사고 장면은 못 봤어요', unknown: '잘 모르겠어요 / 기억나지 않아요' },
+      sawAftermath: { clear: '네, 평소와 다른 모습이 있었어요', uncertain: '봤지만 평소와 달랐는지는 모르겠어요', no: '못 봤어요 / 기억나지 않아요' },
+      aftermathKind: { pain: '아픈 부위를 계속 잡거나 작업을 멈췄어요', stretch: '잠깐 스트레칭하거나 쉬었어요', other: '기타 사항' },
+      heardFrom: { victim: '재해자에게 직접 들었어요', other: '다른 직원이나 관리자에게 들었어요', none: '듣지 못했어요 / 잘 모르겠어요' },
+      heardWhen: { sameDay: '사고 직후 또는 당일', later: '다음 날 이후', unknown: '잘 기억나지 않아요' },
+      workAfter: { stopped: '일을 멈추거나 쉬는 모습을 봤어요', continued: '평소처럼 계속 일하는 모습을 봤어요', unknown: '이후 모습은 못 봤어요 / 잘 모르겠어요' },
+      reportSeen: { direct: '직접 보고하거나 연락하는 것을 봤어요', heard: '보고했다는 이야기만 들었어요', unknown: '확인하지 못했어요 / 잘 모르겠어요' },
+      extraStatus: { yes: '있어요', no: '없어요', unknown: '잘 모르겠어요' }
+    };
+    return (maps[key] && maps[key][w[key]]) || '-';
+  }
+
+  function buildWitnessInterviewPages(result) {
+    if (!result.classified.length) return '';
+    return result.classified.map((x, i) => {
+      const w = x.w;
+      const rows = [
+        ['면담자명', w.name || `목격자 ${i + 1}`],
+        ['면담일시', [w.interviewDate, w.interviewTime].filter(Boolean).join(' ') || '-'],
+        ['사고 당시 무엇을 하고 있었나요?', w.activity || '-'],
+        ['사고 장면을 직접 보셨나요?', witnessAnswerText(w, 'sawAccident')],
+        ...(w.sawAccident === 'yes' ? [['어떤 상황을 보셨나요?', w.accidentDetail || '-']] : []),
+        ['사고 직후 모습은 보셨나요?', witnessAnswerText(w, 'sawAftermath')],
+        ...(w.sawAftermath === 'clear' ? [['어떤 모습이었나요?', witnessAnswerText(w, 'aftermathKind')]] : []),
+        ...((w.sawAftermath === 'uncertain' || w.aftermathKind === 'other') ? [['확인한 모습', w.aftermathDetail || '-']] : []),
+        ['사고 이야기는 누구에게 들으셨나요?', witnessAnswerText(w, 'heardFrom')],
+        ...(w.heardFrom === 'victim' ? [['언제 들으셨나요?', witnessAnswerText(w, 'heardWhen')]] : []),
+        ...(((w.heardFrom === 'victim' && w.heardWhen && w.heardWhen !== 'unknown') || w.heardFrom === 'other') ? [['어떤 말을 들으셨나요?', w.heardDetail || '-']] : []),
+        ['사고 이후에도 계속 일하는 모습을 보셨나요?', witnessAnswerText(w, 'workAfter')],
+        ['관리자에게 사고를 알리는 것을 보셨나요?', witnessAnswerText(w, 'reportSeen')],
+        ...((w.reportSeen === 'direct' || w.reportSeen === 'heard') && w.reportDetail ? [['보고 관련 내용', w.reportDetail]] : []),
+        ['더 확인된 내용이 있나요?', witnessAnswerText(w, 'extraStatus')],
+        ...(w.extraStatus === 'yes' ? [['추가 내용', w.extra || '-']] : [])
+      ];
+      return `<section class="doc-witness-page">
+        <div class="doc-header doc-subpage-header">
+          <p class="doc-header-title">목격자 면담 확인서</p>
+          <p class="doc-header-sub">사고 관리번호 : ${escapeHtml(getOrCreateCaseId())} · 면담 ${i + 1}</p>
+        </div>
+        <div class="doc-interview-sheet">
+          ${rows.map(([q,a], idx) => `<div class="doc-interview-row"><div class="doc-interview-q">${idx + 1}. ${escapeHtml(q)}</div><div class="doc-interview-a">${escapeHtml(a)}</div></div>`).join('')}
+        </div>
+        <p class="doc-interview-confirm">위 내용은 면담 대상자의 답변을 기준으로 작성했으며, 확인하지 못한 내용은 임의로 추측하지 않았습니다.</p>
+      </section>`;
+    }).join('');
+  }
+
   function renderDocPreview(result) {
     const b = result.base;
     const orgStr = [b.invDivision, b.invDept, b.invTeam].filter(Boolean).join(' - ') || '-';
@@ -1269,95 +1318,44 @@ document.addEventListener('DOMContentLoaded', () => {
     const placeStr = b.invIncidentPlace || '-';
 
     const recordLines = [];
-    if (b.invReportImmediate) {
-      recordLines.push(`즉시 보고 기록 있음${b.invReportImmediateDetail ? ' : ' + escapeHtml(b.invReportImmediateDetail) : ''}`);
-    }
-    if (b.invReportChat) {
-      recordLines.push(`카톡/팀즈 등 기록 있음 (증빙 캡처 ${chatImages.length}건 첨부)`);
-    }
-
-    const witnessRows = result.classified.map((x, i) => {
-      const detail = x.w.accidentDetail || x.w.aftermathDetail || x.w.heardDetail || x.w.extra || '-';
-      const interviewAt = [x.w.interviewDate, x.w.interviewTime].filter(Boolean).join(' ') || '-';
-      return `
-      <tr>
-        <td>${escapeHtml(x.w.name) || `목격자${i + 1}`}</td>
-        <td>${escapeHtml(interviewAt)}</td>
-        <td>${escapeHtml(x.c.label)}</td>
-        <td>${escapeHtml(detail)}</td>
-      </tr>`;
-    }).join('');
+    if (b.invReportImmediate) recordLines.push(`즉시 보고 기록 있음${b.invReportImmediateDetail ? ' : ' + escapeHtml(b.invReportImmediateDetail) : ''}`);
+    if (b.invReportChat) recordLines.push('카톡/팀즈 등 보고·공유 기록 확인');
 
     const appendixHtml = buildAppendixHtml(result);
-    const appendixTitle = result.verdict === 'unrecognized'
-      ? '■ 보험가입자의견서 별지 — 재해사실 불인정 사유'
-      : '';
-
     const attachGrid = chatImages.length
       ? `<div class="doc-section"><p class="doc-section-title">■ 첨부 : 공유·보고 기록 캡처</p><div class="doc-attach-grid">${chatImages.map((img, i) => `<img src="${img.dataUrl}" alt="증빙 캡처 ${i + 1}">`).join('')}</div></div>`
       : '';
+    const witnessPages = buildWitnessInterviewPages(result);
 
     document.getElementById('invDocPreview').innerHTML = `
-      <div class="doc-header">
-        <p class="doc-header-title">사고조사 결과 확인서</p>
-        <p class="doc-header-sub">사고 관리번호 : ${escapeHtml(getOrCreateCaseId())}</p>
-      </div>
-
-
-      <div class="doc-info-grid">
-        <div class="doc-info-cell"><span class="doc-info-label">조직</span><span class="doc-info-value">${escapeHtml(orgStr)}</span></div>
-        <div class="doc-info-cell"><span class="doc-info-label">매장명</span><span class="doc-info-value">${escapeHtml(storeName)}</span></div>
-        <div class="doc-info-cell"><span class="doc-info-label">재해자</span><span class="doc-info-value">${escapeHtml(victimName)}</span></div>
-        <div class="doc-info-cell"><span class="doc-info-label">사고 일시</span><span class="doc-info-value">${escapeHtml(dateStr)} ${escapeHtml(timeStr)}</span></div>
-        <div class="doc-info-cell"><span class="doc-info-label">사고 장소</span><span class="doc-info-value">${escapeHtml(placeStr)}</span></div>
-        <div class="doc-info-cell"><span class="doc-info-label">작성자</span><span class="doc-info-value">${escapeHtml(author)}</span></div>
-        <div class="doc-info-cell"><span class="doc-info-label">면담자명</span><span class="doc-info-value">${escapeHtml(interviewerNames)}</span></div>
-      </div>
-
-      ${result.verdict === 'recognized' ? `
-        <div class="doc-section">
-          <p class="doc-section-title">■ 판단 사유</p>
-          ${result.manualReviewed && result.manualReason
-            ? `<div class="doc-reason-text">${result.manualReason.split(/\n+/).map(line => `<p>${escapeHtml(line)}</p>`).join('')}</div>`
-            : `<ul class="doc-reason-list">${result.reasons.map(r => `<li>${escapeHtml(r)}</li>`).join('')}</ul>`}
+      <section class="doc-main-page">
+        <div class="doc-header">
+          <p class="doc-header-title">사고조사 결과 확인서</p>
+          <p class="doc-header-sub">사고 관리번호 : ${escapeHtml(getOrCreateCaseId())}</p>
         </div>
-      ` : ''}
-
-      <div class="doc-section">
-        <p class="doc-section-title">■ 공유·보고 기록</p>
-        <ul class="doc-record-list">
-          ${recordLines.length ? recordLines.map(r => `<li>${r}</li>`).join('') : '<li>확인된 보고 기록 없음</li>'}
-        </ul>
-      </div>
-
-      <div class="doc-section">
-        <p class="doc-section-title">■ 목격자 면담 요약</p>
-        ${witnessRows ? `
-          <table class="doc-witness-table">
-            <thead><tr><th>면담자</th><th>면담일시</th><th>확인 구분</th><th>주요 내용</th></tr></thead>
-            <tbody>${witnessRows}</tbody>
-          </table>
-        ` : '<p style="font-size:12.5px;color:var(--gray-500);">면담 기록 없음</p>'}
-      </div>
-
-      ${appendixHtml ? `
-        <div class="doc-section">
-          <p class="doc-section-title">${appendixTitle}</p>
-          <div class="doc-appendix-box">${appendixHtml}</div>
+        <div class="doc-info-grid">
+          <div class="doc-info-cell"><span class="doc-info-label">조직</span><span class="doc-info-value">${escapeHtml(orgStr)}</span></div>
+          <div class="doc-info-cell"><span class="doc-info-label">매장명</span><span class="doc-info-value">${escapeHtml(storeName)}</span></div>
+          <div class="doc-info-cell"><span class="doc-info-label">재해자</span><span class="doc-info-value">${escapeHtml(victimName)}</span></div>
+          <div class="doc-info-cell"><span class="doc-info-label">사고 일시</span><span class="doc-info-value">${escapeHtml(dateStr)} ${escapeHtml(timeStr)}</span></div>
+          <div class="doc-info-cell"><span class="doc-info-label">사고 장소</span><span class="doc-info-value">${escapeHtml(placeStr)}</span></div>
+          <div class="doc-info-cell"><span class="doc-info-label">작성자</span><span class="doc-info-value">${escapeHtml(author)}</span></div>
+          <div class="doc-info-cell"><span class="doc-info-label">면담자명</span><span class="doc-info-value">${escapeHtml(interviewerNames)}</span></div>
         </div>
-      ` : ''}
-
-      ${attachGrid}
-
-      <div class="doc-signature-row">
-        <span>작성자</span>
-        <span class="doc-signature-name">${escapeHtml(author)}</span>
-      </div>
-
-      <p class="doc-footer-note">
-        본 자료는 사고 당시 사실관계 확인 및 보험가입자의견서 작성 참고를 위한 내부 확인자료입니다. 산재 승인 여부의 최종 판단은 근로복지공단에서 결정합니다.
-      </p>
-    `;
+        <div class="doc-section">
+          <p class="doc-section-title">■ 공유·보고 기록</p>
+          <ul class="doc-record-list">${recordLines.length ? recordLines.map(r => `<li>${r}</li>`).join('') : '<li>확인된 보고 기록 없음</li>'}</ul>
+        </div>
+        <div class="doc-section">
+          <p class="doc-section-title">■ 목격자 면담</p>
+          <p class="doc-witness-summary">총 ${result.classified.length}명 면담 완료${result.classified.length ? '<br>※ 세부 면담내용은 다음 페이지를 참조해 주세요.' : ''}</p>
+        </div>
+        ${appendixHtml ? `<div class="doc-section doc-appendix-section"><p class="doc-section-title">■ 보험가입자의견서 별지 — 재해사실 불인정 사유</p><div class="doc-appendix-box">${appendixHtml}</div></div>` : ''}
+        ${attachGrid}
+        <div class="doc-signature-row"><span>작성자</span><span class="doc-signature-name">${escapeHtml(author)}</span></div>
+        <p class="doc-footer-note">본 자료는 사고 당시 사실관계 확인 및 보험가입자의견서 작성 참고를 위한 내부 확인자료입니다. 산재 승인 여부의 최종 판단은 근로복지공단에서 결정합니다.</p>
+      </section>
+      ${witnessPages}`;
   }
 
   // 문서 미리보기(사용자가 직접 수정한 내용 포함)를 순수 텍스트로 변환 — 구글시트 '문서내용' 컬럼 등에 사용
@@ -1459,27 +1457,46 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 350);
   }
 
-  function buildConflictDraft(result) {
+  function buildUnrecognizedDraft(result) {
     const body = result.reasons
       .filter(r => !r.startsWith('현재 확보된 객관자료만으로는') && !r.startsWith('확보된 영상·목격자'))
       .join('\n');
-    const conflict = result.conflictReasons.join('\n');
-    return `${body}\n${conflict}\n확인자료 간 차이를 종합하여 최종 판단을 작성해 주세요.`.trim();
+    const conflict = result.conflictReasons.length ? `\n${result.conflictReasons.join('\n')}` : '';
+    return `${body}${conflict}\n위 확인사항을 종합하면 현재 확보된 객관자료만으로는 재해자가 주장하는 업무 중 사고 발생 사실을 확인하기 어렵습니다. 이에 사업장에서는 본 건의 재해사실을 인정하기 어렵다는 의견을 제출합니다.`.trim();
   }
 
-  function openConflictReview(result) {
+  function openFinalReview(result) {
     const guide = document.getElementById('invReviewGuideOverlay');
     const reason = document.getElementById('invConflictReason');
+    const reasonWrap = document.getElementById('invConflictReasonWrap');
     const confirm = document.getElementById('invConflictConfirm');
+    const confirmText = document.getElementById('invConflictConfirmText');
     const radios = Array.from(document.querySelectorAll('input[name="invManualVerdict"]'));
     const saveBtn = document.getElementById('invReviewGuideOkBtn');
-    const draft = buildConflictDraft(result);
+    const title = document.getElementById('invReviewGuideTitle');
+    const message = document.getElementById('invReviewGuideMessage');
+    const eyebrow = document.getElementById('invReviewGuideEyebrow');
+    const draft = buildUnrecognizedDraft(result);
 
     window.__conflictDraft = draft;
     if (reason) reason.value = draft;
     if (confirm) confirm.checked = false;
-    radios.forEach(r => { r.checked = false; });
+    radios.forEach(r => {
+      r.checked = r.value === result.verdict;
+      const label = r.closest('.radio-pill');
+      if (label) label.classList.toggle('is-checked', r.checked);
+    });
     if (saveBtn) saveBtn.disabled = true;
+    if (eyebrow) eyebrow.textContent = result.hasConflict ? '확인자료 재검토 필요' : '최종 판단 확인';
+    if (title) title.textContent = result.hasConflict ? '확인자료 간 내용이 서로 다릅니다.' : '조사 결과를 확인해 주세요.';
+    if (message) message.textContent = result.hasConflict
+      ? 'CCTV, 목격자 면담 및 보고기록을 다시 확인한 후 최종 판단을 선택해 주세요.'
+      : '입력한 자료를 바탕으로 시스템이 판단 방향을 제안했습니다. 최종 판단을 확인해 주세요.';
+    if (confirmText) confirmText.textContent = result.hasConflict
+      ? 'CCTV, 목격자 면담 및 보고기록의 차이를 확인하고 최종 판단했습니다.'
+      : 'CCTV, 목격자 면담 및 보고기록을 확인하고 최종 판단했습니다.';
+    const selected = document.querySelector('input[name="invManualVerdict"]:checked');
+    if (reasonWrap) reasonWrap.style.display = selected && selected.value === 'unrecognized' ? '' : 'none';
 
     if (guide) {
       guide.classList.add('visible');
@@ -1487,17 +1504,21 @@ document.addEventListener('DOMContentLoaded', () => {
       const box = guide.querySelector('.submit-box');
       if (box) box.scrollTop = 0;
     }
+    refreshConflictSaveState();
   }
 
   function refreshConflictSaveState() {
     const reason = document.getElementById('invConflictReason');
+    const reasonWrap = document.getElementById('invConflictReasonWrap');
     const confirm = document.getElementById('invConflictConfirm');
     const verdict = document.querySelector('input[name="invManualVerdict"]:checked');
     const saveBtn = document.getElementById('invReviewGuideOkBtn');
+    const isUnrecognized = !!(verdict && verdict.value === 'unrecognized');
+    if (reasonWrap) reasonWrap.style.display = isUnrecognized ? '' : 'none';
     const changed = !!(reason && reason.value.trim() && reason.value.trim() !== String(window.__conflictDraft || '').trim());
-    if (saveBtn) saveBtn.disabled = !(verdict && confirm && confirm.checked && changed);
+    if (saveBtn) saveBtn.disabled = !(verdict && confirm && confirm.checked && (!isUnrecognized || changed));
     const note = document.getElementById('invConflictEditNote');
-    if (note) note.classList.toggle('done', changed);
+    if (note) note.classList.toggle('done', isUnrecognized && changed);
   }
 
   const runBtn = document.getElementById('runInvestigationBtn');
@@ -1511,11 +1532,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       const result = computeJudgement();
       window.__pendingInvestigationResult = result;
-      if (result.hasConflict) {
-        openConflictReview(result);
-        return;
-      }
-      showInvestigationResult(result);
+      openFinalReview(result);
     });
   }
 
@@ -1540,10 +1557,10 @@ document.addEventListener('DOMContentLoaded', () => {
       const result = window.__pendingInvestigationResult || computeJudgement();
       const verdict = document.querySelector('input[name="invManualVerdict"]:checked');
       const reason = document.getElementById('invConflictReason');
-      if (!verdict || !reason) return;
+      if (!verdict) return;
 
       result.verdict = verdict.value;
-      result.manualReason = reason.value.trim();
+      result.manualReason = verdict.value === 'unrecognized' && reason ? reason.value.trim() : '';
       result.manualReviewed = true;
       window.__pendingInvestigationResult = result;
 
@@ -1750,13 +1767,6 @@ document.addEventListener('DOMContentLoaded', () => {
       row(label, value);
     });
 
-    if (result.verdict === 'recognized') {
-      section('판단 사유');
-      (result.reasons && result.reasons.length ? result.reasons : ['판단 사유가 없습니다.']).forEach(reason => {
-        ensure(90);
-        paragraph(`- ${reason}`);
-      });
-    }
 
     section('문서 내용');
     docPreviewToPlainText().split(/\n+/).filter(Boolean).forEach(line => {
@@ -1798,36 +1808,37 @@ document.addEventListener('DOMContentLoaded', () => {
     if (attachSection) attachSection.style.display = 'none';
 
     const capturePromise = new Promise(resolve => setTimeout(resolve, 50))
-      .then(() => html2canvas(preview, { scale: 1.1, backgroundColor: '#ffffff', logging: false }))
-      .then(canvas => {
+      .then(async () => {
         const { jsPDF } = window.jspdf;
-        const imgData = canvas.toDataURL('image/jpeg', 0.78);
-        // 카톡/Teams에서 길쭉한 사용자 정의 PDF가 깨져 보이는 경우가 있어,
-        // 표준 A4 페이지 여러 장으로 나눠 생성합니다.
         const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
         const pageWidthMm = 210;
         const pageHeightMm = 297;
-        const imgHeightMm = (canvas.height * pageWidthMm) / canvas.width;
-        let y = 0;
-        let remainingHeight = imgHeightMm;
+        const sections = Array.from(preview.querySelectorAll(':scope > .doc-main-page, :scope > .doc-witness-page'));
+        const captureTargets = sections.length ? sections : [preview];
+        let firstPdfPage = true;
 
-        pdf.addImage(imgData, 'JPEG', 0, y, pageWidthMm, imgHeightMm);
-        remainingHeight -= pageHeightMm;
+        for (const target of captureTargets) {
+          const canvas = await html2canvas(target, { scale: 1.1, backgroundColor: '#ffffff', logging: false });
+          const imgData = canvas.toDataURL('image/jpeg', 0.78);
+          const imgHeightMm = (canvas.height * pageWidthMm) / canvas.width;
+          let y = 0;
+          let remainingHeight = imgHeightMm;
 
-        while (remainingHeight > 0) {
-          pdf.addPage();
-          y -= pageHeightMm;
+          if (!firstPdfPage) pdf.addPage();
+          firstPdfPage = false;
           pdf.addImage(imgData, 'JPEG', 0, y, pageWidthMm, imgHeightMm);
           remainingHeight -= pageHeightMm;
+
+          while (remainingHeight > 0) {
+            pdf.addPage();
+            y -= pageHeightMm;
+            pdf.addImage(imgData, 'JPEG', 0, y, pageWidthMm, imgHeightMm);
+            remainingHeight -= pageHeightMm;
+          }
         }
 
-        // jsPDF의 datauristring은 "data:application/pdf;filename=...;base64,..." 형태로
-        // 중간에 filename 항목이 끼어있어, 서버(Code.gs)가 기대하는
-        // 표준 "data:application/pdf;base64,..." 형태로 정리합니다.
         const rawUri = pdf.output('datauristring');
         const base64Part = rawUri.split(',').pop();
-        // "PDF 공유하기" 버튼(카톡/Teams 앱 선택 등 OS 공유시트)에서 쓸 수 있도록
-        // 같은 PDF의 Blob도 전역에 보관해둡니다.
         window.__lastPdfBlob = pdf.output('blob');
         return 'data:application/pdf;base64,' + base64Part;
       })
