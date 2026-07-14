@@ -30,7 +30,7 @@ const INV_DOWNLOAD_TOKEN_KEY = 'fieldGuide_investigation_downloadToken';
  * "Teams로 전송" 버튼이 실제로 동작합니다.
  * 비워두면 미리보기만 표시되고 실제 전송은 되지 않습니다.
  */
-const INV_TEAMS_ENDPOINT_URL = 'https://script.google.com/macros/s/AKfycbxQ8t-oSMh97agNb48SOXaZMMhvzLr7JIkZirRNWgWJ8X4Jo-ZN0lBHtHEMqV3K_4U/exec'; // 예: 'https://script.google.com/macros/s/AKfycb.../exec' (새로 배포한 뒤 여기에 붙여넣기)
+const INV_TEAMS_ENDPOINT_URL = ''; // 예: 'https://script.google.com/macros/s/AKfycb.../exec' (새로 배포한 뒤 여기에 붙여넣기)
 
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -676,6 +676,15 @@ document.addEventListener('DOMContentLoaded', () => {
     { key: 'review', title: '입력한 면담 내용을 확인해 주세요.' }
   ];
 
+  function getWitnessSteps(w) {
+    // 사고 장면을 직접 목격한 경우에는 중복 질문인
+    // '사고 직후 모습'과 '사고 이야기를 들었는지' 단계를 생략합니다.
+    if (w && w.sawAccident === 'yes') {
+      return WITNESS_STEPS.filter(step => !['aftermath', 'heard'].includes(step.key));
+    }
+    return WITNESS_STEPS;
+  }
+
   function normalizeWitnessData(data) {
     const now = nowInterviewParts();
     data = data || {};
@@ -733,7 +742,9 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function witnessStepHtml(seq, w, stepIndex) {
-    const step = WITNESS_STEPS[stepIndex];
+    const steps = getWitnessSteps(w);
+    const safeIndex = Math.max(0, Math.min(stepIndex, steps.length - 1));
+    const step = steps[safeIndex];
     const n = (field) => `${field}_${seq}`;
     let body = '';
 
@@ -841,8 +852,8 @@ document.addEventListener('DOMContentLoaded', () => {
           <div><dt>면담자</dt><dd>${escapeHtml(w.name) || '-'}</dd></div>
           <div><dt>면담일시</dt><dd>${escapeHtml(w.interviewDate)} ${escapeHtml(w.interviewTime)}</dd></div>
           <div><dt>직접 목격</dt><dd>${w.sawAccident === 'yes' ? '직접 봄' : w.sawAccident === 'no' ? '보지 못함' : '잘 모르겠음'}</dd></div>
-          <div><dt>사고 직후 모습</dt><dd>${w.sawAftermath === 'clear' ? '평소와 다른 모습 확인' : w.sawAftermath === 'uncertain' ? '관련성 불명확' : '보지 못함 / 기억나지 않음'}</dd></div>
-          <div><dt>사고 이야기</dt><dd>${w.heardFrom === 'victim' ? '재해자에게 직접 들음' : w.heardFrom === 'other' ? '다른 사람에게 들음' : '듣지 못함 / 잘 모르겠음'}</dd></div>
+          ${w.sawAccident === 'yes' ? '' : `<div><dt>사고 직후 모습</dt><dd>${w.sawAftermath === 'clear' ? '평소와 다른 모습 확인' : w.sawAftermath === 'uncertain' ? '관련성 불명확' : '보지 못함 / 기억나지 않음'}</dd></div>
+          <div><dt>사고 이야기</dt><dd>${w.heardFrom === 'victim' ? '재해자에게 직접 들음' : w.heardFrom === 'other' ? '다른 사람에게 들음' : '듣지 못함 / 잘 모르겠음'}</dd></div>`}
           <div><dt>사고 이후 근무</dt><dd>${w.workAfter === 'stopped' ? '업무 중단 또는 휴식' : w.workAfter === 'continued' ? '평소처럼 업무 계속' : '확인하지 못함'}</dd></div>
           <div><dt>관리자 보고</dt><dd>${w.reportSeen === 'direct' ? '직접 확인' : w.reportSeen === 'heard' ? '보고했다는 말을 들음' : '확인하지 못함'}</dd></div>
         </dl>
@@ -854,8 +865,8 @@ document.addEventListener('DOMContentLoaded', () => {
       </label>`;
     }
 
-    return `<div class="witness-wizard-step" data-witness-step="${stepIndex}">
-      <div class="witness-progress"><span>${stepIndex + 1} / ${WITNESS_STEPS.length}</span><div><i style="width:${((stepIndex + 1) / WITNESS_STEPS.length) * 100}%"></i></div></div>
+    return `<div class="witness-wizard-step" data-witness-step="${safeIndex}">
+      <div class="witness-progress"><span>${safeIndex + 1} / ${steps.length}</span><div><i style="width:${((safeIndex + 1) / steps.length) * 100}%"></i></div></div>
       <h5>${step.title}</h5>
       <div class="witness-step-body">${body}</div>
     </div>`;
@@ -871,7 +882,7 @@ document.addEventListener('DOMContentLoaded', () => {
       <div class="witness-wizard-host">${witnessStepHtml(seq, w, w.currentStep)}</div>
       <div class="witness-wizard-actions">
         <button type="button" class="secondary-btn witness-prev-btn" ${w.currentStep === 0 ? 'disabled' : ''}>← 이전</button>
-        ${w.currentStep < WITNESS_STEPS.length - 1
+        ${w.currentStep < getWitnessSteps(w).length - 1
           ? '<button type="button" class="primary-btn witness-next-btn">다음 →</button>'
           : '<button type="button" class="primary-btn witness-save-btn">면담내용 저장하기</button>'}
       </div>
@@ -906,14 +917,16 @@ document.addEventListener('DOMContentLoaded', () => {
     const actions = card.querySelector('.witness-wizard-actions');
     if (actions) actions.innerHTML = `
       <button type="button" class="secondary-btn witness-prev-btn" ${w.currentStep === 0 ? 'disabled' : ''}>← 이전</button>
-      ${w.currentStep < WITNESS_STEPS.length - 1
+      ${w.currentStep < getWitnessSteps(w).length - 1
         ? '<button type="button" class="primary-btn witness-next-btn">다음 →</button>'
         : '<button type="button" class="primary-btn witness-save-btn">면담내용 저장하기</button>'}`;
     renderCardClassify(card);
   }
 
   function validateWitnessStep(w) {
-    switch (WITNESS_STEPS[w.currentStep].key) {
+    const steps = getWitnessSteps(w);
+    const step = steps[Math.max(0, Math.min(w.currentStep, steps.length - 1))];
+    switch (step.key) {
       case 'basic':
         if (!w.name.trim()) return '면담자명을 입력해 주세요.';
         if (!w.interviewDate || !w.interviewTime) return '면담 날짜와 시간을 확인해 주세요.';
@@ -1029,7 +1042,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.target.closest('.witness-next-btn')) {
       const msg = validateWitnessStep(w);
       if (msg) { alert(msg); return; }
-      w.currentStep = Math.min(WITNESS_STEPS.length - 1, w.currentStep + 1);
+      w.currentStep = Math.min(getWitnessSteps(w).length - 1, w.currentStep + 1);
       renderWitnessStep(card);
       card.scrollIntoView({ behavior: 'smooth', block: 'start' });
       saveWitnesses();
@@ -1280,13 +1293,16 @@ document.addEventListener('DOMContentLoaded', () => {
         ['면담일시', [w.interviewDate, w.interviewTime].filter(Boolean).join(' ') || '-'],
         ['사고 당시 무엇을 하고 있었나요?', w.activity || '-'],
         ['사고 장면을 직접 보셨나요?', witnessAnswerText(w, 'sawAccident')],
-        ...(w.sawAccident === 'yes' ? [['어떤 상황을 보셨나요?', w.accidentDetail || '-']] : []),
-        ['사고 직후 모습은 보셨나요?', witnessAnswerText(w, 'sawAftermath')],
-        ...(w.sawAftermath === 'clear' ? [['어떤 모습이었나요?', witnessAnswerText(w, 'aftermathKind')]] : []),
-        ...((w.sawAftermath === 'uncertain' || w.aftermathKind === 'other') ? [['확인한 모습', w.aftermathDetail || '-']] : []),
-        ['사고 이야기는 누구에게 들으셨나요?', witnessAnswerText(w, 'heardFrom')],
-        ...(w.heardFrom === 'victim' ? [['언제 들으셨나요?', witnessAnswerText(w, 'heardWhen')]] : []),
-        ...(((w.heardFrom === 'victim' && w.heardWhen && w.heardWhen !== 'unknown') || w.heardFrom === 'other') ? [['어떤 말을 들으셨나요?', w.heardDetail || '-']] : []),
+        ...(w.sawAccident === 'yes'
+          ? [['어떤 상황을 보셨나요?', w.accidentDetail || '-']]
+          : [
+              ['사고 직후 모습은 보셨나요?', witnessAnswerText(w, 'sawAftermath')],
+              ...(w.sawAftermath === 'clear' ? [['어떤 모습이었나요?', witnessAnswerText(w, 'aftermathKind')]] : []),
+              ...((w.sawAftermath === 'uncertain' || w.aftermathKind === 'other') ? [['확인한 모습', w.aftermathDetail || '-']] : []),
+              ['사고 이야기는 누구에게 들으셨나요?', witnessAnswerText(w, 'heardFrom')],
+              ...(w.heardFrom === 'victim' ? [['언제 들으셨나요?', witnessAnswerText(w, 'heardWhen')]] : []),
+              ...(((w.heardFrom === 'victim' && w.heardWhen && w.heardWhen !== 'unknown') || w.heardFrom === 'other') ? [['어떤 말을 들으셨나요?', w.heardDetail || '-']] : [])
+            ]),
         ['사고 이후에도 계속 일하는 모습을 보셨나요?', witnessAnswerText(w, 'workAfter')],
         ['관리자에게 사고를 알리는 것을 보셨나요?', witnessAnswerText(w, 'reportSeen')],
         ...((w.reportSeen === 'direct' || w.reportSeen === 'heard') && w.reportDetail ? [['보고 관련 내용', w.reportDetail]] : []),
@@ -1317,10 +1333,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const timeStr = b.invIncidentTime || '-';
     const placeStr = b.invIncidentPlace || '-';
 
-    const recordLines = [];
-    if (b.invReportImmediate) recordLines.push(`즉시 보고 기록 있음${b.invReportImmediateDetail ? ' : ' + escapeHtml(b.invReportImmediateDetail) : ''}`);
-    if (b.invReportChat) recordLines.push('카톡/팀즈 등 보고·공유 기록 확인');
-
     const appendixHtml = buildAppendixHtml(result);
     const attachGrid = chatImages.length
       ? `<div class="doc-section"><p class="doc-section-title">■ 첨부 : 공유·보고 기록 캡처</p><div class="doc-attach-grid">${chatImages.map((img, i) => `<img src="${img.dataUrl}" alt="증빙 캡처 ${i + 1}">`).join('')}</div></div>`
@@ -1341,10 +1353,6 @@ document.addEventListener('DOMContentLoaded', () => {
           <div class="doc-info-cell"><span class="doc-info-label">사고 장소</span><span class="doc-info-value">${escapeHtml(placeStr)}</span></div>
           <div class="doc-info-cell"><span class="doc-info-label">작성자</span><span class="doc-info-value">${escapeHtml(author)}</span></div>
           <div class="doc-info-cell"><span class="doc-info-label">면담자명</span><span class="doc-info-value">${escapeHtml(interviewerNames)}</span></div>
-        </div>
-        <div class="doc-section">
-          <p class="doc-section-title">■ 공유·보고 기록</p>
-          <ul class="doc-record-list">${recordLines.length ? recordLines.map(r => `<li>${r}</li>`).join('') : '<li>확인된 보고 기록 없음</li>'}</ul>
         </div>
         <div class="doc-section">
           <p class="doc-section-title">■ 목격자 면담</p>
