@@ -30,7 +30,7 @@ const INV_DOWNLOAD_TOKEN_KEY = 'fieldGuide_investigation_downloadToken';
  * "Teams로 전송" 버튼이 실제로 동작합니다.
  * 비워두면 미리보기만 표시되고 실제 전송은 되지 않습니다.
  */
-const INV_TEAMS_ENDPOINT_URL = 'https://script.google.com/macros/s/AKfycbw-HYl-JwTRty5rbr7DBW5KnFrXHahA-j-fIPElwnRLwNNGd-iHJhPH-5hcvh5L5FaI/exec'; // 예: 'https://script.google.com/macros/s/AKfycb.../exec' (새로 배포한 뒤 여기에 붙여넣기)
+const INV_TEAMS_ENDPOINT_URL = ''; // 예: 'https://script.google.com/macros/s/AKfycb.../exec' (새로 배포한 뒤 여기에 붙여넣기)
 
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -795,7 +795,7 @@ document.addEventListener('DOMContentLoaded', () => {
           ${choice(n('heardWhen'), 'unknown', '잘 기억나지 않아요', w.heardWhen === 'unknown')}
         </div>`;
       }
-      if (w.heardFrom === 'victim' || w.heardFrom === 'other') {
+      if ((w.heardFrom === 'victim' && w.heardWhen && w.heardWhen !== 'unknown') || w.heardFrom === 'other') {
         body += `<label class="form-full witness-conditional">어떤 말을 들으셨나요?
           <textarea data-field="heardDetail" rows="4" placeholder="기억나는 범위에서 작성해 주세요.">${escapeHtml(w.heardDetail)}</textarea>
         </label>`;
@@ -930,7 +930,7 @@ document.addEventListener('DOMContentLoaded', () => {
       case 'heard':
         if (!w.heardFrom) return '답변을 선택해 주세요.';
         if (w.heardFrom === 'victim' && !w.heardWhen) return '언제 들었는지 선택해 주세요.';
-        if ((w.heardFrom === 'victim' || w.heardFrom === 'other') && !w.heardDetail.trim()) return '들은 내용을 간단히 작성해 주세요.';
+        if (((w.heardFrom === 'victim' && w.heardWhen !== 'unknown') || w.heardFrom === 'other') && !w.heardDetail.trim()) return '들은 내용을 간단히 작성해 주세요.';
         return '';
       case 'work': return w.workAfter ? '' : '답변을 선택해 주세요.';
       case 'report': return w.reportSeen ? '' : '답변을 선택해 주세요.';
@@ -947,7 +947,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const w = readCard(card);
     const c = classify(w);
     const area = card.querySelector('[data-role="classify"]');
-    if (area) area.innerHTML = `<span class="classify-badge ${classifyBadgeClass(c.type)}">${c.label}</span>`;
+    if (area) area.innerHTML = card.classList.contains('collapsed')
+      ? `<span class="classify-badge ${classifyBadgeClass(c.type)}">${c.label}</span>`
+      : '';
   }
 
   function collapseCard(card) {
