@@ -30,7 +30,7 @@ const INV_DOWNLOAD_TOKEN_KEY = 'fieldGuide_investigation_downloadToken';
  * "Teams로 전송" 버튼이 실제로 동작합니다.
  * 비워두면 미리보기만 표시되고 실제 전송은 되지 않습니다.
  */
-const INV_TEAMS_ENDPOINT_URL = 'https://script.google.com/macros/s/AKfycbxQ8t-oSMh97agNb48SOXaZMMhvzLr7JIkZirRNWgWJ8X4Jo-ZN0lBHtHEMqV3K_4U/exec'; // 예: 'https://script.google.com/macros/s/AKfycb.../exec' (새로 배포한 뒤 여기에 붙여넣기)
+const INV_TEAMS_ENDPOINT_URL = ''; // 예: 'https://script.google.com/macros/s/AKfycb.../exec' (새로 배포한 뒤 여기에 붙여넣기)
 
 document.addEventListener('DOMContentLoaded', () => {
 
@@ -669,9 +669,9 @@ document.addEventListener('DOMContentLoaded', () => {
     { key: 'basic', title: '면담 기본정보' },
     { key: 'direct', title: '사고 장면을 직접 보셨나요?' },
     { key: 'aftermath', title: '사고 직후 모습은 보셨나요?' },
-    { key: 'heard', title: '사고 이야기는 누구에게 들으셨나요?' },
+    { key: 'heard', title: '재해사실의 사고 이야기를 어떻게 들으셨나요?' },
     { key: 'work', title: '사고 이후에도 계속 일하는 모습을 보셨나요?' },
-    { key: 'extra', title: '더 확인된 내용이 있나요?' },
+    { key: 'extra', title: '추가로 남길 내용이 있나요?' },
     { key: 'review', title: '입력한 면담 내용을 확인해 주세요.' }
   ];
 
@@ -687,6 +687,10 @@ document.addEventListener('DOMContentLoaded', () => {
   function normalizeWitnessData(data) {
     const now = nowInterviewParts();
     data = data || {};
+    // 이전 버전 임시저장값을 단순화된 선택지에 맞게 자동 변환합니다.
+    if (data.sawAccident === 'unknown') data.sawAccident = 'no';
+    if (data.sawAftermath === 'no' || data.sawAftermath === 'uncertain') data.sawAftermath = 'unknown';
+    if (data.heardFrom === 'other' && !data.heardDetail) data.heardFrom = 'colleague';
     return {
       name: data.name || '',
       interviewDate: data.interviewDate || now.date,
@@ -701,6 +705,7 @@ document.addEventListener('DOMContentLoaded', () => {
       heardWhen: data.heardWhen || '',
       heardDetail: data.heardDetail || '',
       workAfter: data.workAfter || '',
+      workDetail: data.workDetail || '',
       extraStatus: data.extraStatus || '',
       extra: data.extra || '',
       confirmed: !!data.confirmed,
@@ -712,9 +717,9 @@ document.addEventListener('DOMContentLoaded', () => {
   function deriveWitnessType(w) {
     if (w.sawAccident === 'yes') return { type: 'direct', label: '사고 장면 직접 목격' };
     if (w.sawAftermath === 'clear') return { type: 'aftermath', label: '사고 직후 이상 모습 확인' };
-    if (w.sawAftermath === 'uncertain') return { type: 'aftermathUnclear', label: '사고 직후 모습 불명확' };
+    if (w.sawAftermath === 'unknown') return { type: 'aftermathUnclear', label: '사고 직후 모습 불명확' };
     if (w.heardFrom === 'victim') return { type: 'secondhand', label: '재해자에게 직접 들음' };
-    if (w.heardFrom === 'other') return { type: 'secondhand', label: '다른 사람에게 전달받음' };
+    if (w.heardFrom === 'colleague' || w.heardFrom === 'other') return { type: 'secondhand', label: '다른 사람에게 전달받음' };
     if (w.sawAccident === 'no' || w.sawAftermath === 'no') return { type: 'unaware', label: '직접 확인한 사고 정황 없음' };
     return { type: 'unknown', label: '잘 모르겠음 / 확인하지 못함' };
   }
@@ -734,8 +739,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  function choice(name, value, text, checked) {
-    return `<label class="witness-choice"><input type="radio" name="${name}" value="${value}" ${checked ? 'checked' : ''}><span>${text}</span></label>`;
+  function choice(name, value, text, checked, hint = '') {
+    return `<label class="witness-choice"><input type="radio" name="${name}" value="${value}" ${checked ? 'checked' : ''}><span class="witness-choice-copy"><b>${text}</b>${hint ? `<small>${hint}</small>` : ''}</span></label>`;
   }
 
   function witnessStepHtml(seq, w, stepIndex) {
@@ -761,73 +766,58 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (step.key === 'direct') {
       body = `<div class="witness-choice-list">
-        ${choice(n('sawAccident'), 'yes', '네, 직접 봤어요', w.sawAccident === 'yes')}
-        ${choice(n('sawAccident'), 'no', '아니요, 사고 장면은 못 봤어요', w.sawAccident === 'no')}
-        ${choice(n('sawAccident'), 'unknown', '잘 모르겠어요 / 기억나지 않아요', w.sawAccident === 'unknown')}
+        ${choice(n('sawAccident'), 'yes', '네', w.sawAccident === 'yes', '사고가 발생하는 순간을 직접 봄')}
+        ${choice(n('sawAccident'), 'no', '아니오', w.sawAccident === 'no', '사고 순간은 보지 못함')}
+        ${choice(n('sawAccident'), 'other', '기타 사항', w.sawAccident === 'other', '일부 장면만 봤거나 설명이 필요한 경우')}
       </div>
-      ${w.sawAccident === 'yes' ? `<label class="form-full witness-conditional">어떤 상황을 보셨나요?
-        <textarea data-field="accidentDetail" rows="4" placeholder="예: 하부장 진열대를 넘어가다가 허리를 잡고 멈추는 모습을 봤어요.">${escapeHtml(w.accidentDetail)}</textarea>
+      ${(w.sawAccident === 'yes' || w.sawAccident === 'other') ? `<label class="form-full witness-conditional">${w.sawAccident === 'yes' ? '직접 본 상황을 적어주세요.' : '추가 설명이 있는 경우 적어주세요.'}
+        <textarea data-field="accidentDetail" rows="4" placeholder="${w.sawAccident === 'yes' ? '예: 하부장 진열대를 넘어가다가 허리를 잡고 멈추는 모습을 봤어요.' : '선택 입력 항목입니다. 작성할 내용이 없으면 비워두세요.'}">${escapeHtml(w.accidentDetail)}</textarea>
       </label>` : ''}`;
     }
 
     if (step.key === 'aftermath') {
       body = `<div class="witness-choice-list">
-        ${choice(n('sawAftermath'), 'clear', '네, 평소와 다른 모습이 있었어요', w.sawAftermath === 'clear')}
-        ${choice(n('sawAftermath'), 'uncertain', '봤지만 평소와 달랐는지는 모르겠어요', w.sawAftermath === 'uncertain')}
-        ${choice(n('sawAftermath'), 'no', '못 봤어요 / 기억나지 않아요', w.sawAftermath === 'no')}
-      </div>`;
-      if (w.sawAftermath === 'clear') {
-        body += `<p class="witness-subquestion">어떤 모습이었나요?</p><div class="witness-choice-list compact">
-          ${choice(n('aftermathKind'), 'pain', '아픈 부위를 계속 잡거나 작업을 멈췄어요', w.aftermathKind === 'pain')}
-          ${choice(n('aftermathKind'), 'stretch', '잠깐 스트레칭하거나 쉬었어요', w.aftermathKind === 'stretch')}
-          ${choice(n('aftermathKind'), 'other', '기타 사항', w.aftermathKind === 'other')}
-        </div>`;
-      }
-      if (w.sawAftermath === 'uncertain' || w.aftermathKind === 'other') {
-        body += `<label class="form-full witness-conditional">확인한 모습을 간단히 적어주세요.
-          <textarea data-field="aftermathDetail" rows="4" placeholder="예: 잠깐 허리를 펴는 모습은 봤지만 이후에는 정상적으로 일했어요.">${escapeHtml(w.aftermathDetail)}</textarea>
-        </label>`;
-      }
+        ${choice(n('sawAftermath'), 'clear', '네', w.sawAftermath === 'clear', '아픈 부위를 잡거나 작업을 멈추는 등 평소와 다른 모습을 봄')}
+        ${choice(n('sawAftermath'), 'unknown', '보지 못했거나 기억나지 않음', w.sawAftermath === 'unknown', '사고 직후를 확인하지 못했거나 정확히 기억나지 않음')}
+        ${choice(n('sawAftermath'), 'other', '기타 사항', w.sawAftermath === 'other', '일부 모습만 봤거나 추가 설명이 필요한 경우')}
+      </div>
+      ${w.sawAftermath === 'other' ? `<label class="form-full witness-conditional">추가 설명이 있는 경우 적어주세요.
+        <textarea data-field="aftermathDetail" rows="4" placeholder="선택 입력 항목입니다. 작성할 내용이 없으면 비워두세요.">${escapeHtml(w.aftermathDetail)}</textarea>
+      </label>` : ''}`;
     }
 
     if (step.key === 'heard') {
       body = `<div class="witness-choice-list">
-        ${choice(n('heardFrom'), 'victim', '재해자에게 직접 들었어요', w.heardFrom === 'victim')}
-        ${choice(n('heardFrom'), 'other', '다른 직원이나 관리자에게 들었어요', w.heardFrom === 'other')}
-        ${choice(n('heardFrom'), 'none', '듣지 못했어요 / 잘 모르겠어요', w.heardFrom === 'none')}
-      </div>`;
-      if (w.heardFrom === 'victim') {
-        body += `<p class="witness-subquestion">언제 들으셨나요?</p><div class="witness-choice-list compact">
-          ${choice(n('heardWhen'), 'sameDay', '사고 직후 또는 당일', w.heardWhen === 'sameDay')}
-          ${choice(n('heardWhen'), 'later', '다음 날 이후', w.heardWhen === 'later')}
-          ${choice(n('heardWhen'), 'unknown', '잘 기억나지 않아요', w.heardWhen === 'unknown')}
-        </div>`;
-      }
-      if ((w.heardFrom === 'victim' && w.heardWhen && w.heardWhen !== 'unknown') || w.heardFrom === 'other') {
-        body += `<label class="form-full witness-conditional">어떤 말을 들으셨나요?
-          <textarea data-field="heardDetail" rows="4" placeholder="기억나는 범위에서 작성해 주세요.">${escapeHtml(w.heardDetail)}</textarea>
-        </label>`;
-      }
+        ${choice(n('heardFrom'), 'victim', '재해자에게 직접 들었어요', w.heardFrom === 'victim', '재해자가 본인에게 사고 내용을 말함')}
+        ${choice(n('heardFrom'), 'colleague', '동료 직원에게 들었어요', w.heardFrom === 'colleague', '동료 직원이 사고 내용을 전달함')}
+        ${choice(n('heardFrom'), 'none', '듣지 못했거나 기억나지 않아요', w.heardFrom === 'none', '사고 이야기를 듣지 못했거나 정확히 기억나지 않음')}
+        ${choice(n('heardFrom'), 'other', '기타 사항', w.heardFrom === 'other', '다른 방법으로 전달받은 내용을 작성')}
+      </div>
+      ${w.heardFrom && w.heardFrom !== 'none' ? `<label class="form-full witness-conditional">들은 내용을 간단히 적어주세요.
+        <textarea data-field="heardDetail" rows="4" placeholder="선택 입력 항목입니다. 작성할 내용이 없으면 비워두고 다음으로 넘어가세요.">${escapeHtml(w.heardDetail)}</textarea>
+      </label>` : ''}`;
     }
 
     if (step.key === 'work') {
       body = `<div class="witness-choice-list">
-        ${choice(n('workAfter'), 'stopped', '일을 멈추거나 쉬는 모습을 봤어요', w.workAfter === 'stopped')}
-        ${choice(n('workAfter'), 'continued', '평소처럼 계속 일하는 모습을 봤어요', w.workAfter === 'continued')}
-        ${choice(n('workAfter'), 'unknown', '이후 모습은 못 봤어요 / 잘 모르겠어요', w.workAfter === 'unknown')}
-      </div>`;
+        ${choice(n('workAfter'), 'continued', '네', w.workAfter === 'continued', '평소처럼 업무를 계속하는 모습을 봄')}
+        ${choice(n('workAfter'), 'stopped', '아니오', w.workAfter === 'stopped', '일을 멈추거나 쉬는 모습을 봄')}
+        ${choice(n('workAfter'), 'unknown', '이후 모습을 보지 못했거나 기억나지 않음', w.workAfter === 'unknown', '이후 근무 상태를 확인하지 못함')}
+        ${choice(n('workAfter'), 'other', '기타 사항', w.workAfter === 'other', '추가 설명이 필요한 경우')}
+      </div>
+      ${w.workAfter === 'other' ? `<label class="form-full witness-conditional">추가 설명이 있는 경우 적어주세요.
+        <textarea data-field="workDetail" rows="4" placeholder="선택 입력 항목입니다. 작성할 내용이 없으면 비워두세요.">${escapeHtml(w.workDetail)}</textarea>
+      </label>` : ''}`;
     }
 
-
     if (step.key === 'extra') {
-      body = `<div class="witness-choice-list">
-        ${choice(n('extraStatus'), 'yes', '있어요', w.extraStatus === 'yes')}
-        ${choice(n('extraStatus'), 'no', '없어요', w.extraStatus === 'no')}
-        ${choice(n('extraStatus'), 'unknown', '잘 모르겠어요', w.extraStatus === 'unknown')}
+      body = `<div class="witness-optional-note">
+        추가로 확인한 내용이 있는 경우에만 작성해 주세요.<br>
+        <strong>작성하지 않아도 다음 단계로 넘어갈 수 있습니다.</strong>
       </div>
-      ${w.extraStatus === 'yes' ? `<label class="form-full witness-conditional">추가 내용을 적어주세요.
-        <textarea data-field="extra" rows="4">${escapeHtml(w.extra)}</textarea>
-      </label>` : ''}`;
+      <label class="form-full witness-conditional witness-optional-field">추가 내용
+        <textarea data-field="extra" rows="4" placeholder="선택 입력 항목입니다. 작성할 내용이 없으면 비워두세요.">${escapeHtml(w.extra)}</textarea>
+      </label>`;
     }
 
     if (step.key === 'review') {
@@ -836,10 +826,10 @@ document.addEventListener('DOMContentLoaded', () => {
         <dl>
           <div><dt>면담자</dt><dd>${escapeHtml(w.name) || '-'}</dd></div>
           <div><dt>면담일시</dt><dd>${escapeHtml(w.interviewDate)} ${escapeHtml(w.interviewTime)}</dd></div>
-          <div><dt>직접 목격</dt><dd>${w.sawAccident === 'yes' ? '직접 봄' : w.sawAccident === 'no' ? '보지 못함' : '잘 모르겠음'}</dd></div>
-          ${w.sawAccident === 'yes' ? '' : `<div><dt>사고 직후 모습</dt><dd>${w.sawAftermath === 'clear' ? '평소와 다른 모습 확인' : w.sawAftermath === 'uncertain' ? '관련성 불명확' : '보지 못함 / 기억나지 않음'}</dd></div>
-          <div><dt>사고 이야기</dt><dd>${w.heardFrom === 'victim' ? '재해자에게 직접 들음' : w.heardFrom === 'other' ? '다른 사람에게 들음' : '듣지 못함 / 잘 모르겠음'}</dd></div>`}
-          <div><dt>사고 이후 근무</dt><dd>${w.workAfter === 'stopped' ? '업무 중단 또는 휴식' : w.workAfter === 'continued' ? '평소처럼 업무 계속' : '확인하지 못함'}</dd></div>
+          <div><dt>직접 목격</dt><dd>${w.sawAccident === 'yes' ? '직접 봄' : w.sawAccident === 'no' ? '보지 못함' : '기타 사항'}</dd></div>
+          ${w.sawAccident === 'yes' ? '' : `<div><dt>사고 직후 모습</dt><dd>${w.sawAftermath === 'clear' ? '평소와 다른 모습 확인' : w.sawAftermath === 'other' ? '기타 사항' : '보지 못했거나 기억나지 않음'}</dd></div>
+          <div><dt>사고 이야기</dt><dd>${w.heardFrom === 'victim' ? '재해자에게 직접 들음' : w.heardFrom === 'colleague' ? '동료 직원에게 들음' : w.heardFrom === 'other' ? '기타 방법으로 전달받음' : '듣지 못했거나 기억나지 않음'}</dd></div>`}
+          <div><dt>사고 이후 근무</dt><dd>${w.workAfter === 'stopped' ? '업무 중단 또는 휴식' : w.workAfter === 'continued' ? '평소처럼 업무 계속' : w.workAfter === 'other' ? '기타 사항' : '확인하지 못함'}</dd></div>
         </dl>
         <span class="classify-badge ${classifyBadgeClass(c.type)}">${c.label}</span>
       </div>
@@ -887,7 +877,7 @@ document.addEventListener('DOMContentLoaded', () => {
       else w[key] = el.value;
     });
     const seq = card.dataset.seq;
-    const radioFields = ['sawAccident','sawAftermath','aftermathKind','heardFrom','heardWhen','workAfter','extraStatus'];
+    const radioFields = ['sawAccident','sawAftermath','heardFrom','workAfter'];
     radioFields.forEach(key => {
       const checked = card.querySelector(`input[name="${key}_${seq}"]:checked`);
       if (checked) w[key] = checked.value;
@@ -920,23 +910,40 @@ document.addEventListener('DOMContentLoaded', () => {
         if (w.sawAccident === 'yes' && !w.accidentDetail.trim()) return '직접 본 상황을 간단히 작성해 주세요.';
         return '';
       case 'aftermath':
-        if (!w.sawAftermath) return '답변을 선택해 주세요.';
-        if (w.sawAftermath === 'clear' && !w.aftermathKind) return '확인한 모습을 선택해 주세요.';
-        if ((w.sawAftermath === 'uncertain' || w.aftermathKind === 'other') && !w.aftermathDetail.trim()) return '확인한 모습을 간단히 작성해 주세요.';
-        return '';
+        return w.sawAftermath ? '' : '답변을 선택해 주세요.';
       case 'heard':
-        if (!w.heardFrom) return '답변을 선택해 주세요.';
-        if (w.heardFrom === 'victim' && !w.heardWhen) return '언제 들었는지 선택해 주세요.';
-        if (((w.heardFrom === 'victim' && w.heardWhen !== 'unknown') || w.heardFrom === 'other') && !w.heardDetail.trim()) return '들은 내용을 간단히 작성해 주세요.';
-        return '';
-      case 'work': return w.workAfter ? '' : '답변을 선택해 주세요.';
+        return w.heardFrom ? '' : '답변을 선택해 주세요.';
+      case 'work':
+        return w.workAfter ? '' : '답변을 선택해 주세요.';
       case 'extra':
-        if (!w.extraStatus) return '답변을 선택해 주세요.';
-        if (w.extraStatus === 'yes' && !w.extra.trim()) return '추가 내용을 작성해 주세요.';
         return '';
       case 'review': return w.confirmed ? '' : '최종 확인란을 체크해 주세요.';
       default: return '';
     }
+  }
+
+  function clearWitnessValidation(card) {
+    card.querySelectorAll('.witness-validation-error, .witness-validation-shake').forEach(el => {
+      el.classList.remove('witness-validation-error', 'witness-validation-shake');
+    });
+    const old = card.querySelector('.witness-validation-message');
+    if (old) old.remove();
+  }
+
+  function showWitnessValidation(card, message) {
+    clearWitnessValidation(card);
+    const stepBody = card.querySelector('.witness-step-body');
+    if (!stepBody) return;
+    let target = stepBody.querySelector('.witness-choice-list, .witness-conditional, input, textarea') || stepBody;
+    target.classList.add('witness-validation-error', 'witness-validation-shake');
+    const note = document.createElement('p');
+    note.className = 'witness-validation-message';
+    note.textContent = message;
+    target.insertAdjacentElement('afterend', note);
+    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const focusable = target.matches('input,textarea') ? target : target.querySelector('input:not([type="radio"]), textarea');
+    if (focusable) setTimeout(() => focusable.focus({ preventScroll: true }), 280);
+    setTimeout(() => target.classList.remove('witness-validation-shake'), 500);
   }
 
   function renderCardClassify(card) {
@@ -1002,6 +1009,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const card = e.target.closest('.witness-card');
     if (!card) return;
     syncVisibleFields(card);
+    clearWitnessValidation(card);
     saveWitnesses();
   });
 
@@ -1009,8 +1017,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const card = e.target.closest('.witness-card');
     if (!card) return;
     syncVisibleFields(card);
+    clearWitnessValidation(card);
     const key = e.target.name ? e.target.name.split('_')[0] : '';
-    if (['sawAccident','sawAftermath','aftermathKind','heardFrom','heardWhen','extraStatus'].includes(key)) {
+    if (['sawAccident','sawAftermath','heardFrom','workAfter'].includes(key)) {
       renderWitnessStep(card);
     }
     saveWitnesses();
@@ -1024,7 +1033,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (e.target.closest('.witness-next-btn')) {
       const msg = validateWitnessStep(w);
-      if (msg) { alert(msg); return; }
+      if (msg) { showWitnessValidation(card, msg); return; }
       w.currentStep = Math.min(getWitnessSteps(w).length - 1, w.currentStep + 1);
       renderWitnessStep(card);
       card.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -1040,7 +1049,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     if (e.target.closest('.witness-save-btn')) {
       const msg = validateWitnessStep(w);
-      if (msg) { alert(msg); return; }
+      if (msg) { showWitnessValidation(card, msg); return; }
       collapseCard(card);
       saveWitnesses();
       return;
@@ -1255,12 +1264,12 @@ document.addEventListener('DOMContentLoaded', () => {
    */
   function witnessAnswerText(w, key) {
     const maps = {
-      sawAccident: { yes: '네, 직접 봤어요', no: '아니요, 사고 장면은 못 봤어요', unknown: '잘 모르겠어요 / 기억나지 않아요' },
-      sawAftermath: { clear: '네, 평소와 다른 모습이 있었어요', uncertain: '봤지만 평소와 달랐는지는 모르겠어요', no: '못 봤어요 / 기억나지 않아요' },
+      sawAccident: { yes: '네', no: '아니오', other: '기타 사항' },
+      sawAftermath: { clear: '네', unknown: '보지 못했거나 기억나지 않음', other: '기타 사항' },
       aftermathKind: { pain: '아픈 부위를 계속 잡거나 작업을 멈췄어요', stretch: '잠깐 스트레칭하거나 쉬었어요', other: '기타 사항' },
-      heardFrom: { victim: '재해자에게 직접 들었어요', other: '다른 직원이나 관리자에게 들었어요', none: '듣지 못했어요 / 잘 모르겠어요' },
+      heardFrom: { victim: '재해자에게 직접 들었어요', colleague: '동료 직원에게 들었어요', none: '듣지 못했거나 기억나지 않아요', other: '기타 사항' },
       heardWhen: { sameDay: '사고 직후 또는 당일', later: '다음 날 이후', unknown: '잘 기억나지 않아요' },
-      workAfter: { stopped: '일을 멈추거나 쉬는 모습을 봤어요', continued: '평소처럼 계속 일하는 모습을 봤어요', unknown: '이후 모습은 못 봤어요 / 잘 모르겠어요' },
+      workAfter: { stopped: '아니오', continued: '네', unknown: '이후 모습을 보지 못했거나 기억나지 않음', other: '기타 사항' },
       reportSeen: { direct: '직접 보고하거나 연락하는 것을 봤어요', heard: '보고했다는 이야기만 들었어요', unknown: '확인하지 못했어요 / 잘 모르겠어요' },
       extraStatus: { yes: '있어요', no: '없어요', unknown: '잘 모르겠어요' }
     };
@@ -1277,18 +1286,17 @@ document.addEventListener('DOMContentLoaded', () => {
         ['사고 당시 무엇을 하고 있었나요?', w.activity || '-'],
         ['사고 장면을 직접 보셨나요?', witnessAnswerText(w, 'sawAccident')],
         ...(w.sawAccident === 'yes'
-          ? [['어떤 상황을 보셨나요?', w.accidentDetail || '-']]
+          ? [['직접 본 상황', w.accidentDetail || '-']]
           : [
-              ['사고 직후 모습은 보셨나요?', witnessAnswerText(w, 'sawAftermath')],
-              ...(w.sawAftermath === 'clear' ? [['어떤 모습이었나요?', witnessAnswerText(w, 'aftermathKind')]] : []),
-              ...((w.sawAftermath === 'uncertain' || w.aftermathKind === 'other') ? [['확인한 모습', w.aftermathDetail || '-']] : []),
-              ['사고 이야기는 누구에게 들으셨나요?', witnessAnswerText(w, 'heardFrom')],
-              ...(w.heardFrom === 'victim' ? [['언제 들으셨나요?', witnessAnswerText(w, 'heardWhen')]] : []),
-              ...(((w.heardFrom === 'victim' && w.heardWhen && w.heardWhen !== 'unknown') || w.heardFrom === 'other') ? [['어떤 말을 들으셨나요?', w.heardDetail || '-']] : [])
+              ...(w.sawAccident === 'other' && w.accidentDetail ? [['직접 목격 관련 추가 설명', w.accidentDetail]] : []),
+              ['사고 직후 평소와 다른 모습을 보셨나요?', witnessAnswerText(w, 'sawAftermath')],
+              ...(w.sawAftermath === 'other' && w.aftermathDetail ? [['추가 설명', w.aftermathDetail]] : []),
+              ['재해사실의 사고 이야기를 어떻게 들으셨나요?', witnessAnswerText(w, 'heardFrom')],
+              ...(w.heardFrom && w.heardFrom !== 'none' && w.heardDetail ? [['들은 내용', w.heardDetail]] : [])
             ]),
         ['사고 이후에도 계속 일하는 모습을 보셨나요?', witnessAnswerText(w, 'workAfter')],
-        ['더 확인된 내용이 있나요?', witnessAnswerText(w, 'extraStatus')],
-        ...(w.extraStatus === 'yes' ? [['추가 내용', w.extra || '-']] : [])
+        ...(w.workAfter === 'other' && w.workDetail ? [['추가 설명', w.workDetail]] : []),
+        ...(w.extra ? [['추가로 남긴 내용', w.extra]] : [])
       ];
       return `<section class="doc-witness-page">
         <div class="doc-header doc-subpage-header">
